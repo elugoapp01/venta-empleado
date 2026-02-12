@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
     <style>
-        /* 🎨 COLORES CORPORATIVOS */
         * {
             margin: 0;
             padding: 0;
@@ -38,7 +37,6 @@
             border: 1px solid rgba(201, 167, 77, 0.15);
         }
 
-        /* ----- HEADER con logo a la derecha, título a la izquierda ----- */
         .header {
             display: flex;
             align-items: center;
@@ -78,7 +76,6 @@
             display: block;
         }
 
-        /* ----- FORMULARIO ----- */
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -199,6 +196,11 @@
             font-size: 1.1rem;
         }
 
+        .camera-btn:hover {
+            background: #E9F0F5;
+            border-color: #3A6D8C;
+        }
+
         .preview-area {
             margin-top: 10px;
             display: flex;
@@ -307,7 +309,7 @@
             margin-right: 5px;
         }
 
-        /* Modal del escáner - CORREGIDO */
+        /* MODAL DEL ESCÁNER - VERSIÓN MEJORADA */
         .scanner-modal {
             display: none;
             position: fixed;
@@ -316,7 +318,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.95);
-            z-index: 9999;
+            z-index: 10000;
             justify-content: center;
             align-items: center;
             flex-direction: column;
@@ -335,6 +337,18 @@
             text-align: center;
         }
 
+        .scanner-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .scanner-header h3 {
+            color: #0B2F5C;
+            margin: 0;
+        }
+
         #scanner-viewport {
             width: 100%;
             height: 350px;
@@ -342,6 +356,7 @@
             overflow: hidden;
             background: #000;
             position: relative;
+            border: 2px solid #C9A74D;
         }
 
         video {
@@ -350,19 +365,22 @@
             object-fit: cover;
         }
 
-        .close-scanner {
-            margin-top: 15px;
-            padding: 12px 24px;
+        .scanner-close {
             background: #C44536;
             color: white;
             border: none;
             border-radius: 30px;
-            cursor: pointer;
-            font-weight: 600;
+            padding: 12px 24px;
             font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .close-scanner:hover {
+        .scanner-close:hover {
             background: #a5372b;
         }
 
@@ -375,7 +393,6 @@
 </head>
 <body>
     <div class="page-container">
-        <!-- HEADER con título a la izquierda, logo a la derecha -->
         <div class="header">
             <div class="title-container">
                 <h1 class="page-title">Registro de artículos</h1>
@@ -385,15 +402,16 @@
             </div>
         </div>
 
-        <!-- Modal del escáner de código de barras -->
+        <!-- MODAL DEL ESCÁNER - VERSIÓN CORREGIDA -->
         <div id="scannerModal" class="scanner-modal">
             <div class="scanner-container">
-                <h3 style="margin-bottom: 15px; color: #0B2F5C;">
-                    <i class="fas fa-camera"></i> Escanear código de barras
-                </h3>
+                <div class="scanner-header">
+                    <h3><i class="fas fa-camera"></i> Escanear código de barras</h3>
+                    <span style="color: #3A6D8C; font-size: 0.9rem;">Apunte la cámara al código</span>
+                </div>
                 <div id="scanner-viewport"></div>
-                <button id="closeScannerBtn" class="close-scanner">
-                    <i class="fas fa-times-circle"></i> Cerrar
+                <button id="closeScannerBtn" class="scanner-close">
+                    <i class="fas fa-times-circle"></i> Cerrar escáner
                 </button>
             </div>
         </div>
@@ -475,11 +493,12 @@
         (function() {
             "use strict";
 
-            // ---------- 🔥 TU WEB APP DE GOOGLE SHEETS 🔥 ----------
+            // ---------- CONFIGURACIÓN ----------
             const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxcLguFrK3q8R1OjPvttkVSdEnFFxqoeX_SwG0x5aQau_FErjwR0DIoufc_cCGHuzUg/exec';
             
             let skuCache = new Set();
             let codeReader = null;
+            let isScanning = false;
 
             // Elementos del DOM
             const skuInput = document.getElementById('sku');
@@ -501,30 +520,27 @@
             const closeScannerBtn = document.getElementById('closeScannerBtn');
             const scannerViewport = document.getElementById('scanner-viewport');
 
-            // ---------- CARGAR SKUS EXISTENTES ----------
+            // ---------- CARGAR SKUS ----------
             async function cargarSkusExistentes() {
                 try {
                     const response = await fetch(GOOGLE_SHEETS_WEBAPP_URL + '?action=getSkus');
                     const data = await response.json();
                     if (data.result === 'success' && data.skus) {
                         skuCache = new Set(data.skus);
-                        console.log('SKUs cargados:', skuCache.size);
                     }
                 } catch (error) {
-                    console.log('No se pudieron cargar SKUs, validación offline');
+                    console.log('No se pudieron cargar SKUs');
                 }
             }
 
             // ---------- VALIDACIÓN SKU ----------
             skuInput.addEventListener('input', function() {
                 const sku = this.value.trim();
-                
                 if (sku === '') {
                     skuValidationMsg.classList.add('hidden');
                     submitBtn.disabled = false;
                     return;
                 }
-
                 if (skuCache.has(sku)) {
                     skuValidationMsg.innerHTML = '<span class="sku-duplicate"><i class="fas fa-exclamation-triangle"></i> SKU DUPLICADO</span>';
                     skuValidationMsg.classList.remove('hidden');
@@ -536,69 +552,104 @@
                 }
             });
 
-            // ---------- ESCÁNER DE CÓDIGO DE BARRAS - VERSIÓN SIMPLIFICADA ----------
-            scanBtn.addEventListener('click', async function(e) {
-                e.preventDefault();
-                
+            // ---------- 🎯 SOLUCIÓN DEFINITIVA PARA EL ESCÁNER ----------
+            async function iniciarEscaner() {
                 try {
                     // Limpiar viewport
                     scannerViewport.innerHTML = '';
                     
-                    // Mostrar modal
-                    scannerModal.classList.add('active');
-                    
-                    // Crear nuevo escáner
+                    // Crear instancia del escáner
                     codeReader = new ZXing.BrowserMultiFormatReader();
                     
-                    // Iniciar escaneo directamente con cámara por defecto
-                    codeReader.decodeOnceFromVideoDevice(undefined, 'scanner-viewport')
-                        .then(result => {
+                    // Obtener dispositivos de video
+                    const devices = await codeReader.listVideoInputDevices();
+                    
+                    if (devices.length === 0) {
+                        throw new Error('No se encontraron cámaras');
+                    }
+                    
+                    // Seleccionar cámara trasera
+                    let deviceId = devices[0].deviceId;
+                    for (const device of devices) {
+                        if (device.label.toLowerCase().includes('back') || 
+                            device.label.toLowerCase().includes('trasera') ||
+                            device.label.toLowerCase().includes('environment')) {
+                            deviceId = device.deviceId;
+                            break;
+                        }
+                    }
+                    
+                    // Mostrar modal
+                    scannerModal.classList.add('active');
+                    isScanning = true;
+                    
+                    // Iniciar escaneo continuo
+                    codeReader.decodeFromVideoDevice(deviceId, 'scanner-viewport', (result, error) => {
+                        if (result && isScanning) {
                             // Código detectado
                             const barcode = result.text;
                             barcodeHidden.value = barcode;
                             barcodeDisplay.innerHTML = `<i class="fas fa-check-circle" style="color:#C9A74D;"></i> ${barcode}`;
                             
-                            // Cerrar modal
+                            // Detener escáner y cerrar modal
+                            detenerEscaner();
                             scannerModal.classList.remove('active');
-                            
-                            // Mensaje de éxito
-                            showMessage('✅ Código de barras capturado: ' + barcode, 'success');
-                        })
-                        .catch(error => {
-                            console.error('Error en escaneo:', error);
-                            showMessage('❌ Error al escanear: ' + error.message, 'error');
-                            scannerModal.classList.remove('active');
-                        });
+                            showMessage('✅ Código de barras: ' + barcode, 'success');
+                        }
+                    });
                     
                 } catch (error) {
-                    console.error('Error al iniciar escáner:', error);
-                    showMessage('❌ No se pudo iniciar la cámara', 'error');
+                    console.error('Error:', error);
+                    showMessage('❌ Error con la cámara: ' + error.message, 'error');
+                    scannerModal.classList.remove('active');
+                }
+            }
+
+            // Función para detener el escáner
+            function detenerEscaner() {
+                if (codeReader) {
+                    try {
+                        codeReader.reset();
+                        codeReader = null;
+                    } catch (e) {
+                        console.log('Error al detener:', e);
+                    }
+                }
+                isScanning = false;
+                scannerViewport.innerHTML = '';
+            }
+
+            // Evento del botón escanear
+            scanBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                iniciarEscaner();
+            });
+
+            // Botón cerrar escáner
+            closeScannerBtn.addEventListener('click', function() {
+                detenerEscaner();
+                scannerModal.classList.remove('active');
+            });
+
+            // Cerrar con tecla ESC
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && scannerModal.classList.contains('active')) {
+                    detenerEscaner();
                     scannerModal.classList.remove('active');
                 }
             });
 
-            // ---------- USAR SKU COMO CÓDIGO DE BARRAS ----------
+            // ---------- USAR SKU COMO CÓDIGO ----------
             useSkuBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 const sku = skuInput.value.trim();
-                
                 if (sku) {
                     barcodeHidden.value = sku;
                     barcodeDisplay.innerHTML = `<i class="fas fa-copy" style="color:#C9A74D;"></i> ${sku} (SKU)`;
-                    showMessage('✅ Código de barras asignado desde SKU', 'success');
+                    showMessage('✅ Código asignado desde SKU', 'success');
                 } else {
-                    showMessage('❌ Primero ingresa un SKU', 'error');
+                    showMessage('❌ Ingresa un SKU primero', 'error');
                 }
-            });
-
-            // ---------- CERRAR ESCÁNER ----------
-            closeScannerBtn.addEventListener('click', function() {
-                if (codeReader) {
-                    codeReader.reset();
-                    codeReader = null;
-                }
-                scannerModal.classList.remove('active');
-                scannerViewport.innerHTML = '';
             });
 
             // ---------- FOTOGRAFÍA ----------
@@ -628,15 +679,14 @@
                 photoPreview.src = '#';
             });
 
-            // ---------- ENVÍO DEL FORMULARIO - CORREGIDO ----------
+            // ---------- ENVÍO DEL FORMULARIO ----------
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
 
                 const sku = skuInput.value.trim();
                 
-                // Validar SKU duplicado
                 if (skuCache.has(sku)) {
-                    showMessage('❌ No se puede registrar: SKU duplicado', 'error');
+                    showMessage('❌ SKU duplicado', 'error');
                     return;
                 }
 
@@ -648,14 +698,11 @@
                     return;
                 }
 
-                // Deshabilitar botón
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Guardando...';
 
-                // Preparar datos para enviar
                 const formData = {
-                    action: 'registrar',
-                    timestamp: new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }),
+                    timestamp: new Date().toLocaleString('es-MX'),
                     sku: sku,
                     codigo_barras: barcodeHidden.value || sku,
                     fotografia: photoBase64Input.value ? 'IMAGEN' : 'SIN FOTO',
@@ -666,41 +713,28 @@
                 };
 
                 try {
-                    console.log('Enviando datos:', formData);
-                    
-                    const response = await fetch(GOOGLE_SHEETS_WEBAPP_URL, {
+                    await fetch(GOOGLE_SHEETS_WEBAPP_URL, {
                         method: 'POST',
-                        mode: 'no-cors', // Cambiado a no-cors para Apps Script
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        mode: 'no-cors',
+                        headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify(formData)
                     });
 
-                    // Con no-cors no podemos leer la respuesta, asumimos éxito
-                    showMessage('✅ Artículo registrado correctamente', 'success');
-                    
-                    // ✅ LIMPIAR FORMULARIO COMPLETAMENTE
+                    showMessage('✅ Artículo registrado', 'success');
                     resetForm();
-                    
-                    // Agregar SKU al cache
                     skuCache.add(sku);
                     
                 } catch (error) {
-                    console.error('Error:', error);
-                    showMessage('Error de conexión con Google Sheets', 'error');
+                    showMessage('Error de conexión', 'error');
                 } finally {
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = '<i class="fas fa-save"></i> Guardar';
                 }
             });
 
-            // ---------- FUNCIÓN PARA LIMPIAR FORMULARIO ----------
+            // ---------- LIMPIAR FORMULARIO ----------
             function resetForm() {
-                // Limpiar todos los campos del formulario
                 form.reset();
-                
-                // Limpiar campos específicos
                 barcodeHidden.value = '';
                 barcodeDisplay.innerHTML = '<i class="fas fa-qrcode"></i> Sin escanear';
                 photoBase64Input.value = '';
@@ -709,19 +743,18 @@
                 photoInput.value = '';
                 skuValidationMsg.classList.add('hidden');
                 
-                console.log('Formulario limpiado');
+                // Asegurar que el escáner esté detenido
+                detenerEscaner();
             }
 
-            // ---------- FUNCIÓN PARA MOSTRAR MENSAJES ----------
+            // ---------- MOSTRAR MENSAJES ----------
             function showMessage(text, type) {
                 msgDiv.textContent = text;
                 msgDiv.className = 'sheet-message ' + type;
-                
-                // Ocultar después de 5 segundos
                 setTimeout(() => {
                     msgDiv.style.display = 'none';
                     msgDiv.className = 'sheet-message';
-                }, 5000);
+                }, 4000);
             }
 
             // Cargar SKUs al iniciar
