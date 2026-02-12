@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>Registro de artículos para venta · Sistema corporativo</title>
-    <!-- Font & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
     <style>
         /* 🎨 COLORES CORPORATIVOS */
         * {
@@ -38,7 +38,6 @@
             border: 1px solid rgba(201, 167, 77, 0.15);
         }
 
-        /* ----- HEADER ----- */
         .header {
             display: flex;
             align-items: center;
@@ -52,8 +51,9 @@
         .logo-area {
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: center;
             flex: 0 0 auto;
+            height: 100%;
         }
 
         .logo-img {
@@ -61,11 +61,15 @@
             height: 52px;
             object-fit: contain;
             border-radius: 12px;
+            display: block;
         }
 
         .title-container {
             flex: 1 1 auto;
             text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .page-title {
@@ -77,19 +81,11 @@
             line-height: 1.2;
         }
 
-        .page-sub {
-            font-size: 0.9rem;
-            color: #5B6F82;
-            font-weight: 400;
-            margin-top: 4px;
-        }
-
         .spacer-right {
             width: 52px;
             visibility: hidden;
         }
 
-        /* ----- FORMULARIO ----- */
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -148,7 +144,6 @@
             background: white;
         }
 
-        /* SKU con validación visual */
         .sku-validation {
             display: flex;
             align-items: center;
@@ -211,6 +206,11 @@
             font-size: 1.1rem;
         }
 
+        .camera-btn:hover {
+            background: #E9F0F5;
+            border-color: #3A6D8C;
+        }
+
         .preview-area {
             margin-top: 10px;
             display: flex;
@@ -242,6 +242,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            min-width: 150px;
         }
 
         .currency-input {
@@ -338,10 +339,61 @@
         .credits {
             margin-top: 20px;
             color: #6C8196;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             text-align: center;
             border-top: 1px solid #E2E8F0;
             padding-top: 20px;
+            font-weight: 500;
+        }
+
+        .credits i {
+            color: #C9A74D;
+            margin-right: 5px;
+        }
+
+        .scanner-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .scanner-modal.active {
+            display: flex;
+        }
+
+        .scanner-container {
+            width: 90%;
+            max-width: 500px;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        #scanner-viewport {
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .close-scanner {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #C44536;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
         }
 
         @media (max-width: 650px) {
@@ -360,44 +412,50 @@
 </head>
 <body>
     <div class="page-container">
-        <!-- HEADER con logo.png -->
         <div class="header">
             <div class="logo-area">
-                <img src="logo.png" alt="Logo" class="logo-img" onerror="this.src='https://via.placeholder.com/52x52/0B2F5C/ffffff?text=EMP'; this.onerror=null;">
-                <span class="logo-text">venta-empleado</span>
+                <img src="logo.png" alt="Logo" class="logo-img" onerror="this.src='https://via.placeholder.com/52x52/0B2F5C/ffffff?text=®'; this.onerror=null;">
             </div>
             <div class="title-container">
                 <h1 class="page-title">Registro de artículos</h1>
-                <div class="page-sub">para venta · control corporativo</div>
             </div>
             <div class="spacer-right"></div>
         </div>
 
+        <div id="scannerModal" class="scanner-modal">
+            <div class="scanner-container">
+                <h3 style="margin-bottom: 15px; color: #0B2F5C;">Escanear código de barras</h3>
+                <div id="scanner-viewport"></div>
+                <button id="closeScannerBtn" class="close-scanner">
+                    <i class="fas fa-times"></i> Cerrar
+                </button>
+            </div>
+        </div>
+
         <form id="articuloForm">
             <div class="form-grid">
-                <!-- SKU numérico con validación en tiempo real -->
                 <div class="form-field">
                     <label><i class="fas fa-hashtag"></i> SKU <span class="required-star">*</span></label>
                     <input type="number" id="sku" placeholder="Ej. 123456789" step="1" min="0" required>
                     <div id="skuValidationMessage" class="sku-validation hidden"></div>
                 </div>
 
-                <!-- CÓDIGO DE BARRAS -->
                 <div class="form-field">
                     <label><i class="fas fa-barcode"></i> Código de barras</label>
                     <div class="camera-buttons-group">
                         <button type="button" id="scanBarcodeBtn" class="camera-btn">
                             <i class="fas fa-camera"></i> Escanear
                         </button>
+                        <button type="button" id="useSkuBtn" class="camera-btn">
+                            <i class="fas fa-copy"></i> Usar SKU
+                        </button>
                         <span id="barcodeDisplay" class="barcode-preview">
                             <i class="fas fa-qrcode"></i> Sin escanear
                         </span>
                     </div>
                     <input type="hidden" id="barcode" value="">
-                    <input type="file" id="barcodeScannerInput" accept="image/*" capture="environment" style="display: none;">
                 </div>
 
-                <!-- FOTOGRAFÍA -->
                 <div class="form-field full-width">
                     <label><i class="fas fa-camera-retro"></i> Fotografía</label>
                     <div class="camera-buttons-group">
@@ -416,19 +474,16 @@
                     <input type="hidden" id="photoBase64" value="">
                 </div>
 
-                <!-- DESCRIPCIÓN -->
                 <div class="form-field">
                     <label><i class="fas fa-align-left"></i> Descripción <span class="required-star">*</span></label>
                     <input type="text" id="descripcion" placeholder="Ej. Pantalón casual" maxlength="120" required>
                 </div>
 
-                <!-- CANTIDAD -->
                 <div class="form-field">
                     <label><i class="fas fa-cubes"></i> Cantidad <span class="required-star">*</span></label>
                     <input type="number" id="cantidad" placeholder="0" min="0" step="1" required>
                 </div>
 
-                <!-- UNIDAD DE VENTA -->
                 <div class="form-field">
                     <label><i class="fas fa-tag"></i> Unidad de venta</label>
                     <select id="unidadVenta">
@@ -437,7 +492,6 @@
                     </select>
                 </div>
 
-                <!-- PRECIO MXN -->
                 <div class="form-field">
                     <label><i class="fas fa-dollar-sign"></i> Precio (MXN) <span class="required-star">*</span></label>
                     <div class="currency-input">
@@ -445,26 +499,17 @@
                         <input type="number" id="precio" placeholder="0.00" min="0" step="0.01" required>
                     </div>
                 </div>
-
-                <!-- COSTO MXN -->
-                <div class="form-field">
-                    <label><i class="fas fa-chart-line"></i> Costo (MXN) <span class="required-star">*</span></label>
-                    <div class="currency-input">
-                        <span class="currency-symbol">$ MXN</span>
-                        <input type="number" id="costo" placeholder="0.00" min="0" step="0.01" required>
-                    </div>
-                </div>
             </div>
 
             <button type="submit" id="submitBtn" class="btn-submit">
-                <i class="fas fa-cloud-upload-alt"></i> Registrar en Google Sheets
+                <i class="fas fa-save"></i> Guardar
             </button>
             
             <div id="googleSheetMessage" class="sheet-message"></div>
         </form>
         
         <div class="credits">
-            <i class="fas fa-shield-alt"></i> Sistema venta-empleado · Validación de duplicados
+            <i class="fas fa-copyright"></i> 2026 E.Lugo Derechos reservados
         </div>
     </div>
 
@@ -472,19 +517,15 @@
         (function() {
             "use strict";
 
-            // ---------- CONFIGURACIÓN ----------
-            // IMPORTANTE: REEMPLAZA CON LA URL DE TU WEB APP
-            const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbxcLguFrK3q8R1OjPvttkVSdEnFFxqoeX_SwG0x5aQau_FErjwR0DIoufc_cCGHuzUg/exec/exec';
+            // ---------- 🔥 TU WEB APP DE GOOGLE SHEETS (YA CONFIGURADA) 🔥 ----------
+            const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxcLguFrK3q8R1OjPvttkVSdEnFFxqoeX_SwG0x5aQau_FErjwR0DIoufc_cCGHuzUg/exec';
             
-            // Cache de SKUs existentes para validación
             let skuCache = new Set();
-            let barcodeCache = new Set();
 
-            // ---------- ELEMENTOS ----------
             const skuInput = document.getElementById('sku');
             const skuValidationMsg = document.getElementById('skuValidationMessage');
-            const barcodeInput = document.getElementById('barcodeScannerInput');
             const scanBtn = document.getElementById('scanBarcodeBtn');
+            const useSkuBtn = document.getElementById('useSkuBtn');
             const barcodeDisplay = document.getElementById('barcodeDisplay');
             const barcodeHidden = document.getElementById('barcode');
             const photoInput = document.getElementById('photoInput');
@@ -496,22 +537,25 @@
             const form = document.getElementById('articuloForm');
             const submitBtn = document.getElementById('submitBtn');
             const msgDiv = document.getElementById('googleSheetMessage');
+            
+            const scannerModal = document.getElementById('scannerModal');
+            const closeScannerBtn = document.getElementById('closeScannerBtn');
+            const scannerViewport = document.getElementById('scanner-viewport');
+            
+            let codeReader = null;
 
-            // ---------- CARGAR SKUS EXISTENTES ----------
             async function cargarSkusExistentes() {
                 try {
                     const response = await fetch(GOOGLE_SHEETS_WEBAPP_URL + '?action=getSkus');
                     const data = await response.json();
                     if (data.result === 'success' && data.skus) {
                         skuCache = new Set(data.skus);
-                        console.log('SKUs cargados:', skuCache.size);
                     }
                 } catch (error) {
-                    console.log('No se pudieron cargar SKUs, validación offline');
+                    console.log('No se pudieron cargar SKUs');
                 }
             }
 
-            // ---------- VALIDACIÓN SKU EN TIEMPO REAL ----------
             skuInput.addEventListener('input', function() {
                 const sku = this.value.trim();
                 
@@ -522,7 +566,7 @@
                 }
 
                 if (skuCache.has(sku)) {
-                    skuValidationMsg.innerHTML = '<span class="sku-duplicate"><i class="fas fa-exclamation-triangle"></i> SKU DUPLICADO - Ya existe en el sistema</span>';
+                    skuValidationMsg.innerHTML = '<span class="sku-duplicate"><i class="fas fa-exclamation-triangle"></i> SKU DUPLICADO</span>';
                     skuValidationMsg.classList.remove('hidden');
                     submitBtn.disabled = true;
                 } else {
@@ -532,21 +576,53 @@
                 }
             });
 
-            // ---------- CÓDIGO DE BARRAS ----------
-            scanBtn.addEventListener('click', function(e) {
+            scanBtn.addEventListener('click', async function(e) {
                 e.preventDefault();
-                barcodeInput.click();
-            });
-
-            barcodeInput.addEventListener('change', function(event) {
-                if (event.target.files && event.target.files[0]) {
-                    const fakeBarcode = '750' + Math.floor(Math.random() * 1000000000).toString().padStart(9, '0');
-                    barcodeHidden.value = fakeBarcode;
-                    barcodeDisplay.innerHTML = `<i class="fas fa-check-circle" style="color:#C9A74D;"></i> ${fakeBarcode}`;
+                
+                scannerModal.classList.add('active');
+                
+                try {
+                    codeReader = new ZXing.BrowserMultiFormatReader();
+                    const videoInputDevices = await codeReader.listVideoInputDevices();
+                    const selectedDeviceId = videoInputDevices[videoInputDevices.length - 1].deviceId;
+                    
+                    codeReader.decodeFromVideoDevice(selectedDeviceId, 'scanner-viewport', (result, err) => {
+                        if (result) {
+                            const barcode = result.text;
+                            barcodeHidden.value = barcode;
+                            barcodeDisplay.innerHTML = `<i class="fas fa-check-circle" style="color:#C9A74D;"></i> ${barcode}`;
+                            
+                            codeReader.reset();
+                            scannerModal.classList.remove('active');
+                            showMessage('✅ Código de barras capturado: ' + barcode, 'success');
+                        }
+                    });
+                } catch (error) {
+                    showMessage('❌ No se pudo iniciar la cámara', 'error');
+                    scannerModal.classList.remove('active');
                 }
             });
 
-            // ---------- FOTOGRAFÍA ----------
+            useSkuBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const sku = skuInput.value.trim();
+                
+                if (sku) {
+                    barcodeHidden.value = sku;
+                    barcodeDisplay.innerHTML = `<i class="fas fa-copy" style="color:#C9A74D;"></i> ${sku} (SKU)`;
+                    showMessage('✅ Código de barras asignado desde SKU', 'success');
+                } else {
+                    showMessage('❌ Primero ingresa un SKU', 'error');
+                }
+            });
+
+            closeScannerBtn.addEventListener('click', function() {
+                if (codeReader) {
+                    codeReader.reset();
+                }
+                scannerModal.classList.remove('active');
+            });
+
             takePhotoBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 photoInput.click();
@@ -573,44 +649,37 @@
                 photoPreview.src = '#';
             });
 
-            // ---------- ENVÍO DEL FORMULARIO ----------
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
 
-                // Validar SKU antes de enviar
                 const sku = skuInput.value.trim();
                 if (skuCache.has(sku)) {
                     showMessage('❌ No se puede registrar: SKU duplicado', 'error');
                     return;
                 }
 
-                // Validar campos requeridos
                 const descripcion = document.getElementById('descripcion').value.trim();
                 const cantidad = document.getElementById('cantidad').value.trim();
                 const precio = document.getElementById('precio').value.trim();
-                const costo = document.getElementById('costo').value.trim();
 
-                if (!sku || !descripcion || !cantidad || !precio || !costo) {
+                if (!sku || !descripcion || !cantidad || !precio) {
                     showMessage('Todos los campos marcados con * son obligatorios', 'error');
                     return;
                 }
 
-                // Deshabilitar botón
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Verificando y registrando...';
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Guardando...';
 
-                // Preparar datos
                 const formData = {
                     timestamp: new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }),
                     sku: sku,
-                    codigo_barras: barcodeHidden.value || 'No escaneado',
+                    codigo_barras: barcodeHidden.value || sku,
                     fotografia: photoBase64Input.value ? 'IMAGEN' : 'SIN FOTO',
                     descripcion: descripcion,
                     cantidad: cantidad,
                     unidad_venta: document.getElementById('unidadVenta').value,
                     precio_mxn: parseFloat(precio).toFixed(2),
-                    costo_venta_mxn: parseFloat(costo).toFixed(2),
-                    fuente: 'venta-empleado'
+                    fuente: 'registro-articulos'
                 };
 
                 try {
@@ -628,16 +697,12 @@
                     if (data.result === 'success') {
                         showMessage('✅ ' + data.message, 'success');
                         resetForm();
-                        // Actualizar cache
                         skuCache.add(sku);
                     } else if (data.result === 'duplicate') {
                         showMessage(data.message, 'error');
-                        skuCache.add(data.sku); // Actualizar cache
-                        // Mostrar mensaje en SKU
+                        skuCache.add(data.sku);
                         skuValidationMsg.innerHTML = '<span class="sku-duplicate"><i class="fas fa-exclamation-triangle"></i> SKU DUPLICADO</span>';
                         skuValidationMsg.classList.remove('hidden');
-                    } else if (data.result === 'duplicate_barcode') {
-                        showMessage(data.message, 'error');
                     } else {
                         showMessage('Error: ' + data.message, 'error');
                     }
@@ -646,11 +711,10 @@
                     showMessage('Error de conexión con Google Sheets', 'error');
                 } finally {
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Registrar en Google Sheets';
+                    submitBtn.innerHTML = '<i class="fas fa-save"></i> Guardar';
                 }
             });
 
-            // ---------- FUNCIONES AUXILIARES ----------
             function showMessage(text, type) {
                 msgDiv.textContent = text;
                 msgDiv.className = 'sheet-message ' + type;
@@ -671,7 +735,6 @@
                 skuValidationMsg.classList.add('hidden');
             }
 
-            // Cargar SKUs al iniciar
             cargarSkusExistentes();
         })();
     </script>
