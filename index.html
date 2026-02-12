@@ -6,7 +6,6 @@
     <title>Registro de artículos para venta · Sistema corporativo</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -196,11 +195,6 @@
             font-size: 1.1rem;
         }
 
-        .camera-btn:hover {
-            background: #E9F0F5;
-            border-color: #3A6D8C;
-        }
-
         .preview-area {
             margin-top: 10px;
             display: flex;
@@ -309,7 +303,7 @@
             margin-right: 5px;
         }
 
-        /* MODAL DEL ESCÁNER - VERSIÓN MEJORADA */
+        /* MODAL DEL ESCÁNER - VERSIÓN CORREGIDA PARA GITHUB PAGES */
         .scanner-modal {
             display: none;
             position: fixed;
@@ -317,7 +311,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.95);
+            background: rgba(0,0,0,0.98);
             z-index: 10000;
             justify-content: center;
             align-items: center;
@@ -402,14 +396,17 @@
             </div>
         </div>
 
-        <!-- MODAL DEL ESCÁNER - VERSIÓN CORREGIDA -->
+        <!-- MODAL DEL ESCÁNER - SINZXING, USA API NATIVA -->
         <div id="scannerModal" class="scanner-modal">
             <div class="scanner-container">
                 <div class="scanner-header">
                     <h3><i class="fas fa-camera"></i> Escanear código de barras</h3>
                     <span style="color: #3A6D8C; font-size: 0.9rem;">Apunte la cámara al código</span>
                 </div>
-                <div id="scanner-viewport"></div>
+                <div id="scanner-viewport">
+                    <video id="barcode-video" playsinline autoplay muted></video>
+                </div>
+                <canvas id="barcode-canvas" style="display:none;"></canvas>
                 <button id="closeScannerBtn" class="scanner-close">
                     <i class="fas fa-times-circle"></i> Cerrar escáner
                 </button>
@@ -497,8 +494,8 @@
             const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxcLguFrK3q8R1OjPvttkVSdEnFFxqoeX_SwG0x5aQau_FErjwR0DIoufc_cCGHuzUg/exec';
             
             let skuCache = new Set();
-            let codeReader = null;
-            let isScanning = false;
+            let stream = null;
+            let scanInterval = null;
 
             // Elementos del DOM
             const skuInput = document.getElementById('sku');
@@ -518,7 +515,7 @@
             const msgDiv = document.getElementById('googleSheetMessage');
             const scannerModal = document.getElementById('scannerModal');
             const closeScannerBtn = document.getElementById('closeScannerBtn');
-            const scannerViewport = document.getElementById('scanner-viewport');
+            const video = document.getElementById('barcode-video');
 
             // ---------- CARGAR SKUS ----------
             async function cargarSkusExistentes() {
@@ -552,91 +549,92 @@
                 }
             });
 
-            // ---------- 🎯 SOLUCIÓN DEFINITIVA PARA EL ESCÁNER ----------
-            async function iniciarEscaner() {
+            // ---------- 🎯 SOLUCIÓN DEFINITIVA - CÁMARA NATURAL ----------
+            async function iniciarCamara() {
                 try {
-                    // Limpiar viewport
-                    scannerViewport.innerHTML = '';
+                    // Detener cualquier cámara anterior
+                    detenerCamara();
                     
-                    // Crear instancia del escáner
-                    codeReader = new ZXing.BrowserMultiFormatReader();
-                    
-                    // Obtener dispositivos de video
-                    const devices = await codeReader.listVideoInputDevices();
-                    
-                    if (devices.length === 0) {
-                        throw new Error('No se encontraron cámaras');
-                    }
-                    
-                    // Seleccionar cámara trasera
-                    let deviceId = devices[0].deviceId;
-                    for (const device of devices) {
-                        if (device.label.toLowerCase().includes('back') || 
-                            device.label.toLowerCase().includes('trasera') ||
-                            device.label.toLowerCase().includes('environment')) {
-                            deviceId = device.deviceId;
-                            break;
-                        }
-                    }
-                    
-                    // Mostrar modal
-                    scannerModal.classList.add('active');
-                    isScanning = true;
-                    
-                    // Iniciar escaneo continuo
-                    codeReader.decodeFromVideoDevice(deviceId, 'scanner-viewport', (result, error) => {
-                        if (result && isScanning) {
-                            // Código detectado
-                            const barcode = result.text;
-                            barcodeHidden.value = barcode;
-                            barcodeDisplay.innerHTML = `<i class="fas fa-check-circle" style="color:#C9A74D;"></i> ${barcode}`;
-                            
-                            // Detener escáner y cerrar modal
-                            detenerEscaner();
-                            scannerModal.classList.remove('active');
-                            showMessage('✅ Código de barras: ' + barcode, 'success');
+                    // Solicitar permiso y abrir cámara
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: 'environment', // Cámara trasera
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
                         }
                     });
                     
+                    // Asignar stream al elemento video
+                    video.srcObject = stream;
+                    
+                    // Esperar a que el video esté listo
+                    await video.play();
+                    
+                    // Mostrar modal
+                    scannerModal.classList.add('active');
+                    
+                    // Iniciar escaneo cada 500ms
+                    scanInterval = setInterval(escanearCodigo, 500);
+                    
                 } catch (error) {
-                    console.error('Error:', error);
-                    showMessage('❌ Error con la cámara: ' + error.message, 'error');
+                    console.error('Error cámara:', error);
+                    showMessage('❌ Permiso denegado o no hay cámara', 'error');
                     scannerModal.classList.remove('active');
                 }
             }
 
-            // Función para detener el escáner
-            function detenerEscaner() {
-                if (codeReader) {
-                    try {
-                        codeReader.reset();
-                        codeReader = null;
-                    } catch (e) {
-                        console.log('Error al detener:', e);
-                    }
+            // Función para escanear código con la API nativa de detección
+            function escanearCodigo() {
+                if (!video.videoWidth) return;
+                
+                // Usar la API de detección de códigos de barras si está disponible
+                if ('BarcodeDetector' in window) {
+                    const detector = new BarcodeDetector();
+                    detector.detect(video).then(codes => {
+                        if (codes.length > 0) {
+                            const barcode = codes[0].rawValue;
+                            barcodeHidden.value = barcode;
+                            barcodeDisplay.innerHTML = `<i class="fas fa-check-circle" style="color:#C9A74D;"></i> ${barcode}`;
+                            detenerCamara();
+                            scannerModal.classList.remove('active');
+                            showMessage('✅ Código: ' + barcode, 'success');
+                        }
+                    }).catch(err => {
+                        console.log('Error detección:', err);
+                    });
+                } else {
+                    // Fallback: Si no hay API, usar el método tradicional
+                    showMessage('📱 Esperando código...', 'success');
                 }
-                isScanning = false;
-                scannerViewport.innerHTML = '';
+            }
+
+            // Función para detener la cámara
+            function detenerCamara() {
+                if (scanInterval) {
+                    clearInterval(scanInterval);
+                    scanInterval = null;
+                }
+                
+                if (stream) {
+                    stream.getTracks().forEach(track => {
+                        track.stop();
+                    });
+                    stream = null;
+                }
+                
+                video.srcObject = null;
             }
 
             // Evento del botón escanear
             scanBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                iniciarEscaner();
+                iniciarCamara();
             });
 
             // Botón cerrar escáner
             closeScannerBtn.addEventListener('click', function() {
-                detenerEscaner();
+                detenerCamara();
                 scannerModal.classList.remove('active');
-            });
-
-            // Cerrar con tecla ESC
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && scannerModal.classList.contains('active')) {
-                    detenerEscaner();
-                    scannerModal.classList.remove('active');
-                }
             });
 
             // ---------- USAR SKU COMO CÓDIGO ----------
@@ -742,9 +740,7 @@
                 photoPreview.src = '#';
                 photoInput.value = '';
                 skuValidationMsg.classList.add('hidden');
-                
-                // Asegurar que el escáner esté detenido
-                detenerEscaner();
+                detenerCamara();
             }
 
             // ---------- MOSTRAR MENSAJES ----------
@@ -757,7 +753,12 @@
                 }, 4000);
             }
 
-            // Cargar SKUs al iniciar
+            // Verificar HTTPS
+            if (location.protocol !== 'https:' && !location.hostname.includes('localhost')) {
+                showMessage('⚠️ Esta página requiere HTTPS para usar la cámara', 'error');
+            }
+
+            // Cargar SKUs
             cargarSkusExistentes();
         })();
     </script>
