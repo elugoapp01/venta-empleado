@@ -245,31 +245,6 @@
             min-width: 150px;
         }
 
-        .currency-input {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-        .currency-symbol {
-            position: absolute;
-            left: 18px;
-            font-weight: 600;
-            color: #4B6376;
-            background: #EDF2F7;
-            padding: 0 8px;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            pointer-events: none;
-            z-index: 2;
-            height: 30px;
-            display: flex;
-            align-items: center;
-        }
-        .currency-input input {
-            padding-left: 85px;
-            width: 100%;
-        }
-
         .btn-submit {
             background: #0B2F5C;
             border: none;
@@ -329,13 +304,6 @@
             display: block;
         }
 
-        .sheet-message.warning {
-            background: #FFF4E0;
-            color: #8A6D3B;
-            border-left: 6px solid #C9A74D;
-            display: block;
-        }
-
         .credits {
             margin-top: 20px;
             color: #6C8196;
@@ -383,6 +351,8 @@
             height: auto;
             border-radius: 12px;
             overflow: hidden;
+            min-height: 300px;
+            background: #000;
         }
 
         .close-scanner {
@@ -394,6 +364,12 @@
             border-radius: 30px;
             cursor: pointer;
             font-weight: 600;
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
         }
 
         @media (max-width: 650px) {
@@ -491,14 +467,6 @@
                         <option value="Caja">Caja</option>
                     </select>
                 </div>
-
-                <div class="form-field">
-                    <label><i class="fas fa-dollar-sign"></i> Precio (MXN) <span class="required-star">*</span></label>
-                    <div class="currency-input">
-                        <span class="currency-symbol">$ MXN</span>
-                        <input type="number" id="precio" placeholder="0.00" min="0" step="0.01" required>
-                    </div>
-                </div>
             </div>
 
             <button type="submit" id="submitBtn" class="btn-submit">
@@ -517,11 +485,14 @@
         (function() {
             "use strict";
 
-            // ---------- 🔥 TU WEB APP DE GOOGLE SHEETS (YA CONFIGURADA) 🔥 ----------
+            // ---------- 🔥 TU WEB APP DE GOOGLE SHEETS 🔥 ----------
             const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxcLguFrK3q8R1OjPvttkVSdEnFFxqoeX_SwG0x5aQau_FErjwR0DIoufc_cCGHuzUg/exec';
             
             let skuCache = new Set();
+            let codeReader = null;
+            let isScanning = false;
 
+            // Elementos del DOM
             const skuInput = document.getElementById('sku');
             const skuValidationMsg = document.getElementById('skuValidationMessage');
             const scanBtn = document.getElementById('scanBarcodeBtn');
@@ -537,25 +508,25 @@
             const form = document.getElementById('articuloForm');
             const submitBtn = document.getElementById('submitBtn');
             const msgDiv = document.getElementById('googleSheetMessage');
-            
             const scannerModal = document.getElementById('scannerModal');
             const closeScannerBtn = document.getElementById('closeScannerBtn');
             const scannerViewport = document.getElementById('scanner-viewport');
-            
-            let codeReader = null;
 
+            // ---------- CARGAR SKUS EXISTENTES ----------
             async function cargarSkusExistentes() {
                 try {
                     const response = await fetch(GOOGLE_SHEETS_WEBAPP_URL + '?action=getSkus');
                     const data = await response.json();
                     if (data.result === 'success' && data.skus) {
                         skuCache = new Set(data.skus);
+                        console.log('SKUs cargados:', skuCache.size);
                     }
                 } catch (error) {
-                    console.log('No se pudieron cargar SKUs');
+                    console.log('No se pudieron cargar SKUs, validación offline');
                 }
             }
 
+            // ---------- VALIDACIÓN SKU ----------
             skuInput.addEventListener('input', function() {
                 const sku = this.value.trim();
                 
@@ -576,33 +547,76 @@
                 }
             });
 
+            // ---------- ESCÁNER DE CÓDIGO DE BARRAS - CORREGIDO ----------
             scanBtn.addEventListener('click', async function(e) {
                 e.preventDefault();
                 
+                // Limpiar cualquier escáner anterior
+                if (codeReader) {
+                    codeReader.reset();
+                    codeReader = null;
+                }
+                
+                // Mostrar modal
                 scannerModal.classList.add('active');
                 
                 try {
+                    // Crear nueva instancia del escáner
                     codeReader = new ZXing.BrowserMultiFormatReader();
-                    const videoInputDevices = await codeReader.listVideoInputDevices();
-                    const selectedDeviceId = videoInputDevices[videoInputDevices.length - 1].deviceId;
                     
-                    codeReader.decodeFromVideoDevice(selectedDeviceId, 'scanner-viewport', (result, err) => {
+                    // Listar dispositivos de video
+                    const videoInputDevices = await codeReader.listVideoInputDevices();
+                    
+                    if (videoInputDevices.length === 0) {
+                        throw new Error('No se encontraron cámaras');
+                    }
+                    
+                    // Seleccionar la cámara trasera (generalmente la última)
+                    let selectedDeviceId = videoInputDevices[0].deviceId;
+                    
+                    // Intentar encontrar la cámara trasera (environment)
+                    for (const device of videoInputDevices) {
+                        if (device.label.toLowerCase().includes('back') || 
+                            device.label.toLowerCase().includes('trasera') ||
+                            device.label.toLowerCase().includes('environment')) {
+                            selectedDeviceId = device.deviceId;
+                            break;
+                        }
+                    }
+                    
+                    // Limpiar el viewport
+                    scannerViewport.innerHTML = '';
+                    
+                    // Iniciar escaneo
+                    codeReader.decodeFromVideoDevice(selectedDeviceId, 'scanner-viewport', (result, error) => {
                         if (result) {
+                            // Código detectado
                             const barcode = result.text;
                             barcodeHidden.value = barcode;
                             barcodeDisplay.innerHTML = `<i class="fas fa-check-circle" style="color:#C9A74D;"></i> ${barcode}`;
                             
+                            // Detener escáner y cerrar modal
                             codeReader.reset();
                             scannerModal.classList.remove('active');
+                            isScanning = false;
                             showMessage('✅ Código de barras capturado: ' + barcode, 'success');
                         }
+                        
+                        if (error && !(error instanceof ZXing.NotFoundException)) {
+                            console.log('Error de escaneo:', error);
+                        }
                     });
+                    
+                    isScanning = true;
+                    
                 } catch (error) {
-                    showMessage('❌ No se pudo iniciar la cámara', 'error');
+                    console.error('Error al iniciar escáner:', error);
+                    showMessage('❌ No se pudo iniciar la cámara: ' + error.message, 'error');
                     scannerModal.classList.remove('active');
                 }
             });
 
+            // ---------- USAR SKU COMO CÓDIGO DE BARRAS ----------
             useSkuBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 const sku = skuInput.value.trim();
@@ -616,13 +630,17 @@
                 }
             });
 
+            // ---------- CERRAR ESCÁNER ----------
             closeScannerBtn.addEventListener('click', function() {
                 if (codeReader) {
                     codeReader.reset();
+                    codeReader = null;
                 }
                 scannerModal.classList.remove('active');
+                isScanning = false;
             });
 
+            // ---------- FOTOGRAFÍA ----------
             takePhotoBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 photoInput.click();
@@ -649,6 +667,7 @@
                 photoPreview.src = '#';
             });
 
+            // ---------- ENVÍO DEL FORMULARIO ----------
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
 
@@ -660,10 +679,9 @@
 
                 const descripcion = document.getElementById('descripcion').value.trim();
                 const cantidad = document.getElementById('cantidad').value.trim();
-                const precio = document.getElementById('precio').value.trim();
 
-                if (!sku || !descripcion || !cantidad || !precio) {
-                    showMessage('Todos los campos marcados con * son obligatorios', 'error');
+                if (!sku || !descripcion || !cantidad) {
+                    showMessage('SKU, Descripción y Cantidad son obligatorios', 'error');
                     return;
                 }
 
@@ -678,7 +696,6 @@
                     descripcion: descripcion,
                     cantidad: cantidad,
                     unidad_venta: document.getElementById('unidadVenta').value,
-                    precio_mxn: parseFloat(precio).toFixed(2),
                     fuente: 'registro-articulos'
                 };
 
@@ -715,6 +732,7 @@
                 }
             });
 
+            // ---------- FUNCIONES AUXILIARES ----------
             function showMessage(text, type) {
                 msgDiv.textContent = text;
                 msgDiv.className = 'sheet-message ' + type;
@@ -735,6 +753,7 @@
                 skuValidationMsg.classList.add('hidden');
             }
 
+            // Cargar SKUs al iniciar
             cargarSkusExistentes();
         })();
     </script>
