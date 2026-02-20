@@ -36,7 +36,7 @@
             border: 1px solid rgba(201, 167, 77, 0.15);
         }
 
-        /* HEADER: logo a la izquierda y más grande */
+        /* HEADER CON LOGO A LA IZQUIERDA Y MÁS GRANDE */
         .header {
             display: flex;
             align-items: center;
@@ -56,8 +56,8 @@
         }
 
         .logo-img {
-            width: 80px;  /* Logo más grande */
-            height: 80px; /* Logo más grande */
+            width: 80px;
+            height: 80px;
             object-fit: contain;
             border-radius: 12px;
             display: block;
@@ -135,7 +135,7 @@
             background: white;
         }
 
-        /* Eliminados estilos de validación SKU */
+        /* ESTILOS DE VALIDACIÓN ELIMINADOS */
 
         .camera-buttons-group {
             display: flex;
@@ -165,11 +165,6 @@
         .camera-btn i {
             color: #3A6D8C;
             font-size: 1.1rem;
-        }
-
-        .camera-btn:hover {
-            background: #E9F0F5;
-            border-color: #3A6D8C;
         }
 
         .preview-area {
@@ -280,7 +275,6 @@
             margin-right: 5px;
         }
 
-        /* MODAL DEL ESCÁNER */
         .scanner-modal {
             display: none;
             position: fixed;
@@ -372,7 +366,7 @@
 </head>
 <body>
     <div class="page-container">
-        <!-- HEADER: logo a la izquierda y más grande -->
+        <!-- HEADER CON LOGO A LA IZQUIERDA Y MÁS GRANDE -->
         <div class="header">
             <div class="logo-area">
                 <img src="logo.png" alt="Logo" class="logo-img" onerror="this.src='https://via.placeholder.com/80x80/0B2F5C/ffffff?text=®'; this.onerror=null;">
@@ -404,7 +398,7 @@
                 <div class="form-field">
                     <label><i class="fas fa-hashtag"></i> SKU <span class="required-star">*</span></label>
                     <input type="number" id="sku" placeholder="Ej. 123456789" step="1" min="0" required>
-                    <!-- Validación de SKU eliminada -->
+                    <!-- VALIDACIÓN DE SKU ELIMINADA -->
                 </div>
 
                 <div class="form-field">
@@ -479,6 +473,7 @@
             // ---------- CONFIGURACIÓN ----------
             const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzhJlHr6COYzLQx1ot9y-hXkqVYtQGIx3pwOqe9Eg7vix0MEsYLvYfSq9kQGd8R4eG7/exec';
             
+            let skuCache = new Set();  // MANTENEMOS ESTO PERO NO LO USAMOS PARA VALIDAR
             let stream = null;
             let scanInterval = null;
 
@@ -500,6 +495,21 @@
             const scannerModal = document.getElementById('scannerModal');
             const closeScannerBtn = document.getElementById('closeScannerBtn');
             const video = document.getElementById('barcode-video');
+
+            // ---------- CARGAR SKUS (OPCIONAL, SOLO PARA REFERENCIA) ----------
+            async function cargarSkusExistentes() {
+                try {
+                    const response = await fetch(GOOGLE_SHEETS_WEBAPP_URL + '?action=getSkus');
+                    const data = await response.json();
+                    if (data.result === 'success' && data.skus) {
+                        skuCache = new Set(data.skus);
+                    }
+                } catch (error) {
+                    console.log('No se pudieron cargar SKUs');
+                }
+            }
+
+            // VALIDACIÓN DE SKU ELIMINADA - No hay event listener
 
             // 🔥 FUNCIÓN PARA REPRODUCIR BEEP
             function reproducirBeep() {
@@ -714,6 +724,9 @@
             if (location.protocol !== 'https:' && !location.hostname.includes('localhost')) {
                 showMessage('⚠️ Esta página requiere HTTPS para usar la cámara', 'error');
             }
+
+            // Cargar SKUs (opcional, solo para mantener la estructura)
+            cargarSkusExistentes();
         })();
     </script>
 </body>
