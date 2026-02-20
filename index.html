@@ -36,14 +36,31 @@
             border: 1px solid rgba(201, 167, 77, 0.15);
         }
 
+        /* ----- HEADER CON LOGO A LA IZQUIERDA Y MÁS GRANDE ----- */
         .header {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start; /* Cambiado a flex-start para alinear a la izquierda */
+            gap: 20px; /* Espacio entre logo y título */
             flex-wrap: wrap;
             margin-bottom: 30px;
             border-bottom: 2px solid #E9ECF0;
             padding-bottom: 18px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+
+        .logo-img {
+            width: 80px;  /* Aumentado de 52px a 80px */
+            height: 80px; /* Aumentado de 52px a 80px */
+            object-fit: contain;
+            border-radius: 12px;
+            display: block;
         }
 
         .title-container {
@@ -60,21 +77,7 @@
             line-height: 1.2;
         }
 
-        .logo-area {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            flex: 0 0 auto;
-        }
-
-        .logo-img {
-            width: 52px;
-            height: 52px;
-            object-fit: contain;
-            border-radius: 12px;
-            display: block;
-        }
-
+        /* El resto del CSS sigue IGUAL que antes */
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -195,6 +198,11 @@
             font-size: 1.1rem;
         }
 
+        .camera-btn:hover {
+            background: #E9F0F5;
+            border-color: #3A6D8C;
+        }
+
         .preview-area {
             margin-top: 10px;
             display: flex;
@@ -303,7 +311,7 @@
             margin-right: 5px;
         }
 
-        /* MODAL DEL ESCÁNER - VERSIÓN CORREGIDA PARA GITHUB PAGES */
+        /* MODAL DEL ESCÁNER */
         .scanner-modal {
             display: none;
             position: fixed;
@@ -381,22 +389,31 @@
         @media (max-width: 650px) {
             .page-container { padding: 22px 18px; }
             .page-title { font-size: 1.5rem; }
-            .logo-img { width: 46px; height: 46px; }
+            .logo-img { width: 70px; height: 70px; } /* Un poco más pequeño en móvil pero sigue siendo grande */
+        }
+        @media (max-width: 480px) {
+            .header { 
+                justify-content: center; 
+                gap: 15px;
+            }
+            .title-container { order: 2; width: 100%; text-align: center; }
+            .logo-area { order: 1; margin-right: 0; }
         }
     </style>
 </head>
 <body>
     <div class="page-container">
+        <!-- HEADER con logo a la izquierda y más grande -->
         <div class="header">
+            <div class="logo-area">
+                <img src="logo.png" alt="Logo" class="logo-img" onerror="this.src='https://via.placeholder.com/80x80/0B2F5C/ffffff?text=®'; this.onerror=null;">
+            </div>
             <div class="title-container">
                 <h1 class="page-title">Registro de artículos</h1>
             </div>
-            <div class="logo-area">
-                <img src="logo.png" alt="Logo" class="logo-img" onerror="this.src='https://via.placeholder.com/52x52/0B2F5C/ffffff?text=®'; this.onerror=null;">
-            </div>
         </div>
 
-        <!-- MODAL DEL ESCÁNER - SINZXING, USA API NATIVA -->
+        <!-- MODAL DEL ESCÁNER -->
         <div id="scannerModal" class="scanner-modal">
             <div class="scanner-container">
                 <div class="scanner-header">
@@ -491,7 +508,7 @@
             "use strict";
 
             // ---------- CONFIGURACIÓN ----------
-            const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzhJlHr6COYzLQx1ot9y-hXkqVYtQGIx3pwOqe9Eg7vix0MEsYLvYfSq9kQGd8R4eG7/exec';
+            const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxcLguFrK3q8R1OjPvttkVSdEnFFxqoeX_SwG0x5aQau_FErjwR0DIoufc_cCGHuzUg/exec';
             
             let skuCache = new Set();
             let stream = null;
@@ -549,31 +566,24 @@
                 }
             });
 
-            // ---------- 🎯 SOLUCIÓN DEFINITIVA - CÁMARA NATURAL ----------
+            // ---------- CÁMARA PARA CÓDIGO DE BARRAS ----------
             async function iniciarCamara() {
                 try {
-                    // Detener cualquier cámara anterior
                     detenerCamara();
                     
-                    // Solicitar permiso y abrir cámara
                     stream = await navigator.mediaDevices.getUserMedia({
                         video: {
-                            facingMode: 'environment', // Cámara trasera
+                            facingMode: 'environment',
                             width: { ideal: 1280 },
                             height: { ideal: 720 }
                         }
                     });
                     
-                    // Asignar stream al elemento video
                     video.srcObject = stream;
-                    
-                    // Esperar a que el video esté listo
                     await video.play();
                     
-                    // Mostrar modal
                     scannerModal.classList.add('active');
                     
-                    // Iniciar escaneo cada 500ms
                     scanInterval = setInterval(escanearCodigo, 500);
                     
                 } catch (error) {
@@ -595,6 +605,10 @@
                             const barcode = codes[0].rawValue;
                             barcodeHidden.value = barcode;
                             barcodeDisplay.innerHTML = `<i class="fas fa-check-circle" style="color:#C9A74D;"></i> ${barcode}`;
+                            
+                            // 🔊 REPRODUCIR BEEP AL DETECTAR CÓDIGO
+                            reproducirBeep();
+                            
                             detenerCamara();
                             scannerModal.classList.remove('active');
                             showMessage('✅ Código: ' + barcode, 'success');
@@ -608,7 +622,34 @@
                 }
             }
 
-            // Función para detener la cámara
+            // 🔥 FUNCIÓN PARA REPRODUCIR BEEP
+            function reproducirBeep() {
+                try {
+                    // Crear contexto de audio
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Crear oscilador
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    oscillator.frequency.value = 800; // Frecuencia del beep
+                    gainNode.gain.value = 0.5; // Volumen
+                    
+                    oscillator.start();
+                    
+                    // Detener después de 200ms
+                    setTimeout(() => {
+                        oscillator.stop();
+                        audioCtx.close();
+                    }, 200);
+                } catch (e) {
+                    console.log('No se pudo reproducir beep', e);
+                }
+            }
+
             function detenerCamara() {
                 if (scanInterval) {
                     clearInterval(scanInterval);
@@ -703,7 +744,7 @@
                     timestamp: new Date().toLocaleString('es-MX'),
                     sku: sku,
                     codigo_barras: barcodeHidden.value || sku,
-                    fotografia: photoBase64Input.value || '',  // Esto envía el base64 real
+                    fotografia: photoBase64Input.value || '',
                     descripcion: descripcion,
                     cantidad: cantidad,
                     unidad_venta: document.getElementById('unidadVenta').value,
