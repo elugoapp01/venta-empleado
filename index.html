@@ -491,7 +491,7 @@
             "use strict";
 
             // ---------- CONFIGURACIÓN ----------
-            const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbw00UJDXN7_0D0JBojLSrgCbV9iOuwVpPakyXMfcmkTWfCc5uKJDQaqXZBMgIshaNgs/exec';
+            const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzSQq02u3VG1lrkbb5G4l2VLEDwrSyn_x65CIEpRZF2UIyfxIHCj8ZWSS1vzKdq3p6j/exec';
             
             let skuCache = new Set();
             let stream = null;
@@ -703,7 +703,7 @@
                     timestamp: new Date().toLocaleString('es-MX'),
                     sku: sku,
                     codigo_barras: barcodeHidden.value || sku,
-                    fotografia: photoBase64Input.value ? 'IMAGEN' : 'SIN FOTO',
+                    fotografia: photoBase64Input.value || '', // Envía el base64 de la foto si existe, o vacío
                     descripcion: descripcion,
                     cantidad: cantidad,
                     unidad_venta: document.getElementById('unidadVenta').value,
@@ -764,4 +764,5 @@
     </script>
 </body>
 </html>
+
 
