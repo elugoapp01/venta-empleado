@@ -491,7 +491,7 @@
             "use strict";
 
             // ---------- CONFIGURACIÓN ----------
-            const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzSQq02u3VG1lrkbb5G4l2VLEDwrSyn_x65CIEpRZF2UIyfxIHCj8ZWSS1vzKdq3p6j/exec';
+            const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwJqWBNwA1zkkpC-1LeLuxdiKqF8JU2-WRyG_bq5HBLwZ5aCIfD84CpFKdCBaDh2yEO/exec';
             
             let skuCache = new Set();
             let stream = null;
@@ -677,58 +677,71 @@
                 photoPreview.src = '#';
             });
 
-            // ---------- ENVÍO DEL FORMULARIO ----------
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
+            // ---------- ENVÍO DEL FORMULARIO (VERSIÓN CON DIAGNÓSTICO) ----------
+form.addEventListener('submit', async function(e) {
+    e.preventDefault();
 
-                const sku = skuInput.value.trim();
-                
-                if (skuCache.has(sku)) {
-                    showMessage('❌ SKU duplicado', 'error');
-                    return;
-                }
+    const sku = skuInput.value.trim();
+    
+    if (skuCache.has(sku)) {
+        showMessage('❌ SKU duplicado', 'error');
+        return;
+    }
 
-                const descripcion = document.getElementById('descripcion').value.trim();
-                const cantidad = document.getElementById('cantidad').value.trim();
+    const descripcion = document.getElementById('descripcion').value.trim();
+    const cantidad = document.getElementById('cantidad').value.trim();
 
-                if (!sku || !descripcion || !cantidad) {
-                    showMessage('SKU, Descripción y Cantidad son obligatorios', 'error');
-                    return;
-                }
+    if (!sku || !descripcion || !cantidad) {
+        showMessage('SKU, Descripción y Cantidad son obligatorios', 'error');
+        return;
+    }
 
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Guardando...';
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Guardando...';
 
-                const formData = {
-                    timestamp: new Date().toLocaleString('es-MX'),
-                    sku: sku,
-                    codigo_barras: barcodeHidden.value || sku,
-                    fotografia: photoBase64Input.value || '', // Envía el base64 de la foto si existe, o vacío
-                    descripcion: descripcion,
-                    cantidad: cantidad,
-                    unidad_venta: document.getElementById('unidadVenta').value,
-                    fuente: 'registro-articulos'
-                };
+    const formData = {
+        timestamp: new Date().toLocaleString('es-MX'),
+        sku: sku,
+        codigo_barras: barcodeHidden.value || sku,
+        fotografia: photoBase64Input.value || '',
+        descripcion: descripcion,
+        cantidad: cantidad,
+        unidad_venta: document.getElementById('unidadVenta').value,
+        fuente: 'registro-articulos'
+    };
 
-                try {
-                    await fetch(GOOGLE_SHEETS_WEBAPP_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(formData)
-                    });
+    try {
+        // CAMBIAMOS DE 'no-cors' a 'cors' para poder ver errores
+        const response = await fetch(GOOGLE_SHEETS_WEBAPP_URL, {
+            method: 'POST',
+            mode: 'cors', // CAMBIADO
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        });
 
-                    showMessage('✅ Artículo registrado', 'success');
-                    resetForm();
-                    skuCache.add(sku);
-                    
-                } catch (error) {
-                    showMessage('Error de conexión', 'error');
-                } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-save"></i> Guardar';
-                }
-            });
+        const result = await response.json();
+        
+        if (result.result === 'success') {
+            showMessage('✅ Artículo registrado', 'success');
+            resetForm();
+            skuCache.add(sku);
+            
+            // Mostrar estado de la foto si hay información
+            if (result.fotoStatus && result.fotoStatus.includes('ERROR')) {
+                console.warn('Problema con foto:', result.fotoStatus);
+            }
+        } else {
+            showMessage('Error: ' + result.message, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error completo:', error);
+        showMessage('Error de conexión: ' + error.message, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Guardar';
+    }
+});
 
             // ---------- LIMPIAR FORMULARIO ----------
             function resetForm() {
@@ -764,5 +777,6 @@
     </script>
 </body>
 </html>
+
 
 
