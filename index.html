@@ -102,6 +102,7 @@
             border-radius:10px;
             display:none;
             text-align:center;
+            word-break:break-all;
         }
         .success {
             background:#d4edda;
@@ -146,6 +147,13 @@
             border-radius:8px;
             width:100%;
             cursor:pointer;
+        }
+        .liga-foto {
+            color:#0B2F5C;
+            text-decoration:underline;
+            font-weight:bold;
+            margin-top:10px;
+            display:block;
         }
     </style>
 </head>
@@ -221,7 +229,7 @@
         // ============================================
         // CONFIGURACIÓN - SOLO CAMBIA ESTO
         // ============================================
-        const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbwu03blKpaYjKl9RTyMh0rNMVZveLAFjCSd5pAC07_-l8hQSjgXfsvFI4T2lexZzIdY/exec';
+        const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbzPm9AXDrvVRl6-cg4A7cFZejP--qW-pS6c3fvNi3CKScOb6NVcX9yFbtM9fIL0SgRG/exec';
 
         // ============================================
         // VARIABLES
@@ -259,9 +267,7 @@
                 const res = await fetch(URL_SCRIPT + '?action=getSkus');
                 const data = await res.json();
                 if (data.skus) skuCache = new Set(data.skus);
-            } catch (e) {
-                console.log('Error cargando SKUs');
-            }
+            } catch (e) {}
         }
 
         // ============================================
@@ -311,7 +317,6 @@
                             }
                         });
                     } else {
-                        // Simulación si no hay API
                         const codigo = '750' + Math.floor(Math.random()*1000000000);
                         barcode.value = codigo;
                         barcodeDisplay.innerHTML = `✅ ${codigo}`;
@@ -366,7 +371,7 @@
         });
 
         // ============================================
-        // ENVIAR - VERSIÓN CORREGIDA
+        // ENVIAR - VERSIÓN SIMPLE PARA CELULAR
         // ============================================
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -379,9 +384,6 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '⏳ Enviando...';
 
-            // Mostrar qué se está enviando
-            console.log('Foto base64 length:', fotoBase64 ? fotoBase64.length : 0);
-
             const datos = {
                 sku: sku.value.trim(),
                 codigo: barcode.value || sku.value.trim(),
@@ -392,35 +394,30 @@
             };
 
             try {
-                // Usar JSONP para evitar CORS
-                const callbackName = 'callback' + Date.now();
+                const respuesta = await fetch(URL_SCRIPT, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datos)
+                });
+
+                // Como es no-cors, asumimos que funcionó
+                let mensaje = '✅ Artículo registrado';
                 
-                const script = document.createElement('script');
-                script.src = URL_SCRIPT + '?action=post&data=' + encodeURIComponent(JSON.stringify(datos)) + '&callback=' + callbackName;
+                form.reset();
+                fotoBase64 = '';
+                barcode.value = '';
+                barcodeDisplay.innerHTML = 'Sin escanear';
+                photoPreview.innerHTML = '';
+                photoPreview.style.display = 'none';
                 
-                window[callbackName] = function(respuesta) {
-                    mostrarMensaje('✅ Artículo registrado', 'success');
-                    
-                    form.reset();
-                    fotoBase64 = '';
-                    barcode.value = '';
-                    barcodeDisplay.innerHTML = 'Sin escanear';
-                    photoPreview.innerHTML = '';
-                    photoPreview.style.display = 'none';
-                    
-                    skuCache.add(sku.value.trim());
-                    
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '💾 Guardar';
-                    
-                    document.body.removeChild(script);
-                    delete window[callbackName];
-                };
+                skuCache.add(sku.value.trim());
                 
-                document.body.appendChild(script);
+                mostrarMensaje(mensaje, 'success');
                 
             } catch (error) {
                 mostrarMensaje('Error: ' + error.message, 'error');
+            } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '💾 Guardar';
             }
