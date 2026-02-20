@@ -489,8 +489,8 @@
         (function() {
             "use strict";
 
-            // ---------- 🔥 TU WEB APP URL (CAMBIA ESTO POR LA QUE COPIaste) ----------
-            const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyLLmUm_XpENnsZ3wxGRUdgUvrLYwPeZDY0EhJmQs_02EDNJ-FyLSqPd9dYmKm3c_IT/exec';
+            // ---------- 🔥 TU WEB APP URL ----------
+            const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwu03blKpaYjKl9RTyMh0rNMVZveLAFjCSd5pAC07_-l8hQSjgXfsvFI4T2lexZzIdY/exec';
             
             let skuCache = new Set();
             let stream = null;
@@ -657,57 +657,67 @@
                 photoPreview.src = '#';
             });
 
-            // ---------- ENVÍO DEL FORMULARIO (VERSIÓN SIMPLE) ----------
-form.addEventListener('submit', async function(e) {
-  e.preventDefault();
+            // ---------- ENVÍO DEL FORMULARIO ----------
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
 
-  const sku = skuInput.value.trim();
-  const descripcion = document.getElementById('descripcion').value.trim();
-  const cantidad = document.getElementById('cantidad').value.trim();
+                const sku = skuInput.value.trim();
+                
+                if (skuCache.has(sku)) {
+                    showMessage('❌ SKU duplicado', 'error');
+                    return;
+                }
 
-  if (!sku || !descripcion || !cantidad) {
-    showMessage('SKU, Descripción y Cantidad son obligatorios', 'error');
-    return;
-  }
+                const descripcion = document.getElementById('descripcion').value.trim();
+                const cantidad = document.getElementById('cantidad').value.trim();
 
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = 'Guardando...';
+                if (!sku || !descripcion || !cantidad) {
+                    showMessage('SKU, Descripción y Cantidad son obligatorios', 'error');
+                    return;
+                }
 
-  // Datos SIMPLES
-  const datos = {
-    sku: sku,
-    codigo: barcodeHidden.value || sku,
-    foto: photoBase64Input.value || '',
-    descripcion: descripcion,
-    cantidad: cantidad,
-    unidad: document.getElementById('unidadVenta').value
-  };
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Guardando...';
 
-  try {
-    const response = await fetch('https://script.google.com/macros/s/AKfycbw00UJDXN7_0D0JBojLSrgCbV9iOuwVpPakyXMfcmkTWfCc5uKJDQaqXZBMgIshaNgs/exec', {
-      method: 'POST',
-      mode: 'cors',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(datos)
-    });
+                const formData = {
+                    timestamp: new Date().toLocaleString('es-MX'),
+                    sku: sku,
+                    codigo_barras: barcodeHidden.value || sku,
+                    fotografia: photoBase64Input.value || '',
+                    descripcion: descripcion,
+                    cantidad: cantidad,
+                    unidad_venta: document.getElementById('unidadVenta').value,
+                    fuente: 'registro-articulos'
+                };
 
-    const result = await response.json();
-    
-    if (result.resultado === 'ok') {
-      showMessage('✅ Guardado. Foto: ' + (result.foto || 'Sin foto'), 'success');
-      resetForm();
-      skuCache.add(sku);
-      if (result.foto) console.log('Liga de la foto:', result.foto); // ← LA LIGA
-    } else {
-      showMessage('Error: ' + result.mensaje, 'error');
-    }
-  } catch (error) {
-    showMessage('Error de conexión', 'error');
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = 'Guardar';
-  }
-});
+                try {
+                    const response = await fetch(GOOGLE_SHEETS_WEBAPP_URL, {
+                        method: 'POST',
+                        mode: 'cors',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(formData)
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.result === 'success') {
+                        showMessage('✅ Artículo registrado', 'success');
+                        resetForm();
+                        skuCache.add(sku);
+                        if (result.fotoUrl) console.log('Liga de la foto:', result.fotoUrl);
+                    } else {
+                        showMessage('Error: ' + result.message, 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    showMessage('Error de conexión: ' + error.message, 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-save"></i> Guardar';
+                }
+            });
+
             // ---------- LIMPIAR FORMULARIO ----------
             function resetForm() {
                 form.reset();
@@ -740,4 +750,3 @@ form.addEventListener('submit', async function(e) {
     </script>
 </body>
 </html>
-
