@@ -423,7 +423,7 @@
             try {
                 const respuesta = await fetch(URL_SCRIPT, {
                     method: 'POST',
-                    mode: 'cors',
+                    mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(datos)
                 });
@@ -476,3 +476,4 @@
     </script>
 </body>
 </html>
+
