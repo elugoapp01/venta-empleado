@@ -303,7 +303,6 @@
             margin-right: 5px;
         }
 
-        /* MODAL DEL ESCÁNER - VERSIÓN CORREGIDA PARA GITHUB PAGES */
         .scanner-modal {
             display: none;
             position: fixed;
@@ -396,7 +395,7 @@
             </div>
         </div>
 
-        <!-- MODAL DEL ESCÁNER - SINZXING, USA API NATIVA -->
+        <!-- MODAL DEL ESCÁNER -->
         <div id="scannerModal" class="scanner-modal">
             <div class="scanner-container">
                 <div class="scanner-header">
@@ -490,8 +489,8 @@
         (function() {
             "use strict";
 
-            // ---------- CONFIGURACIÓN ----------
-            const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwJqWBNwA1zkkpC-1LeLuxdiKqF8JU2-WRyG_bq5HBLwZ5aCIfD84CpFKdCBaDh2yEO/exec';
+            // ---------- 🔥 TU WEB APP URL (CAMBIA ESTO POR LA QUE COPIaste) ----------
+            const GOOGLE_SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyLLmUm_XpENnsZ3wxGRUdgUvrLYwPeZDY0EhJmQs_02EDNJ-FyLSqPd9dYmKm3c_IT/exec';
             
             let skuCache = new Set();
             let stream = null;
@@ -549,31 +548,24 @@
                 }
             });
 
-            // ---------- 🎯 SOLUCIÓN DEFINITIVA - CÁMARA NATURAL ----------
+            // ---------- CÁMARA PARA CÓDIGO DE BARRAS ----------
             async function iniciarCamara() {
                 try {
-                    // Detener cualquier cámara anterior
                     detenerCamara();
                     
-                    // Solicitar permiso y abrir cámara
                     stream = await navigator.mediaDevices.getUserMedia({
                         video: {
-                            facingMode: 'environment', // Cámara trasera
+                            facingMode: 'environment',
                             width: { ideal: 1280 },
                             height: { ideal: 720 }
                         }
                     });
                     
-                    // Asignar stream al elemento video
                     video.srcObject = stream;
-                    
-                    // Esperar a que el video esté listo
                     await video.play();
                     
-                    // Mostrar modal
                     scannerModal.classList.add('active');
                     
-                    // Iniciar escaneo cada 500ms
                     scanInterval = setInterval(escanearCodigo, 500);
                     
                 } catch (error) {
@@ -583,11 +575,9 @@
                 }
             }
 
-            // Función para escanear código con la API nativa de detección
             function escanearCodigo() {
                 if (!video.videoWidth) return;
                 
-                // Usar la API de detección de códigos de barras si está disponible
                 if ('BarcodeDetector' in window) {
                     const detector = new BarcodeDetector();
                     detector.detect(video).then(codes => {
@@ -602,36 +592,26 @@
                     }).catch(err => {
                         console.log('Error detección:', err);
                     });
-                } else {
-                    // Fallback: Si no hay API, usar el método tradicional
-                    showMessage('📱 Esperando código...', 'success');
                 }
             }
 
-            // Función para detener la cámara
             function detenerCamara() {
                 if (scanInterval) {
                     clearInterval(scanInterval);
                     scanInterval = null;
                 }
-                
                 if (stream) {
-                    stream.getTracks().forEach(track => {
-                        track.stop();
-                    });
+                    stream.getTracks().forEach(track => track.stop());
                     stream = null;
                 }
-                
                 video.srcObject = null;
             }
 
-            // Evento del botón escanear
             scanBtn.addEventListener('click', function(e) {
                 e.preventDefault();
                 iniciarCamara();
             });
 
-            // Botón cerrar escáner
             closeScannerBtn.addEventListener('click', function() {
                 detenerCamara();
                 scannerModal.classList.remove('active');
@@ -677,71 +657,66 @@
                 photoPreview.src = '#';
             });
 
-            // ---------- ENVÍO DEL FORMULARIO (VERSIÓN CON DIAGNÓSTICO) ----------
-form.addEventListener('submit', async function(e) {
-    e.preventDefault();
+            // ---------- ENVÍO DEL FORMULARIO (CORREGIDO) ----------
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
 
-    const sku = skuInput.value.trim();
-    
-    if (skuCache.has(sku)) {
-        showMessage('❌ SKU duplicado', 'error');
-        return;
-    }
+                const sku = skuInput.value.trim();
+                
+                if (skuCache.has(sku)) {
+                    showMessage('❌ SKU duplicado', 'error');
+                    return;
+                }
 
-    const descripcion = document.getElementById('descripcion').value.trim();
-    const cantidad = document.getElementById('cantidad').value.trim();
+                const descripcion = document.getElementById('descripcion').value.trim();
+                const cantidad = document.getElementById('cantidad').value.trim();
 
-    if (!sku || !descripcion || !cantidad) {
-        showMessage('SKU, Descripción y Cantidad son obligatorios', 'error');
-        return;
-    }
+                if (!sku || !descripcion || !cantidad) {
+                    showMessage('SKU, Descripción y Cantidad son obligatorios', 'error');
+                    return;
+                }
 
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Guardando...';
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Guardando...';
 
-    const formData = {
-        timestamp: new Date().toLocaleString('es-MX'),
-        sku: sku,
-        codigo_barras: barcodeHidden.value || sku,
-        fotografia: photoBase64Input.value || '',
-        descripcion: descripcion,
-        cantidad: cantidad,
-        unidad_venta: document.getElementById('unidadVenta').value,
-        fuente: 'registro-articulos'
-    };
+                // IMPORTANTE: Enviar la foto COMPLETA en base64
+                const formData = {
+                    timestamp: new Date().toLocaleString('es-MX'),
+                    sku: sku,
+                    codigo_barras: barcodeHidden.value || sku,
+                    fotografia: photoBase64Input.value || '', // ¡Esto envía la foto real!
+                    descripcion: descripcion,
+                    cantidad: cantidad,
+                    unidad_venta: document.getElementById('unidadVenta').value,
+                    fuente: 'registro-articulos'
+                };
 
-    try {
-        // CAMBIAMOS DE 'no-cors' a 'cors' para poder ver errores
-        const response = await fetch(GOOGLE_SHEETS_WEBAPP_URL, {
-            method: 'POST',
-            mode: 'cors', // CAMBIADO
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(formData)
-        });
+                try {
+                    const response = await fetch(GOOGLE_SHEETS_WEBAPP_URL, {
+                        method: 'POST',
+                        mode: 'cors', // Cambiado a cors para recibir respuesta
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(formData)
+                    });
 
-        const result = await response.json();
-        
-        if (result.result === 'success') {
-            showMessage('✅ Artículo registrado', 'success');
-            resetForm();
-            skuCache.add(sku);
-            
-            // Mostrar estado de la foto si hay información
-            if (result.fotoStatus && result.fotoStatus.includes('ERROR')) {
-                console.warn('Problema con foto:', result.fotoStatus);
-            }
-        } else {
-            showMessage('Error: ' + result.message, 'error');
-        }
-        
-    } catch (error) {
-        console.error('Error completo:', error);
-        showMessage('Error de conexión: ' + error.message, 'error');
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-save"></i> Guardar';
-    }
-});
+                    const result = await response.json();
+                    
+                    if (result.result === 'success') {
+                        showMessage('✅ Artículo registrado', 'success');
+                        resetForm();
+                        skuCache.add(sku);
+                    } else {
+                        showMessage('Error: ' + result.message, 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    showMessage('Error de conexión: ' + error.message, 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-save"></i> Guardar';
+                }
+            });
 
             // ---------- LIMPIAR FORMULARIO ----------
             function resetForm() {
@@ -756,7 +731,6 @@ form.addEventListener('submit', async function(e) {
                 detenerCamara();
             }
 
-            // ---------- MOSTRAR MENSAJES ----------
             function showMessage(text, type) {
                 msgDiv.textContent = text;
                 msgDiv.className = 'sheet-message ' + type;
@@ -768,15 +742,11 @@ form.addEventListener('submit', async function(e) {
 
             // Verificar HTTPS
             if (location.protocol !== 'https:' && !location.hostname.includes('localhost')) {
-                showMessage('⚠️ Esta página requiere HTTPS para usar la cámara', 'error');
+                showMessage('⚠️ Esta página requiere HTTPS', 'error');
             }
 
-            // Cargar SKUs
             cargarSkusExistentes();
         })();
     </script>
 </body>
 </html>
-
-
-
