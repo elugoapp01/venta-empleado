@@ -68,12 +68,12 @@
         }
 
         .logo-img {
-    width: 70px;  /* Cambia de 52px a 70px */
-    height: 70px; /* Cambia de 52px a 70px */
-    object-fit: contain;
-    border-radius: 12px;
-    display: block;
-}
+            width: 52px;
+            height: 52px;
+            object-fit: contain;
+            border-radius: 12px;
+            display: block;
+        }
 
         .form-grid {
             display: grid;
@@ -418,7 +418,7 @@
                 <div class="form-field">
                     <label><i class="fas fa-hashtag"></i> SKU <span class="required-star">*</span></label>
                     <input type="number" id="sku" placeholder="Ej. 123456789" step="1" min="0" required>
-                    <!-- <div id="skuValidationMessage" class="sku-validation hidden"></div> -->
+                    <div id="skuValidationMessage" class="sku-validation hidden"></div>
                 </div>
 
                 <div class="form-field">
@@ -499,6 +499,7 @@
 
             // Elementos del DOM
             const skuInput = document.getElementById('sku');
+            const skuValidationMsg = document.getElementById('skuValidationMessage');
             const scanBtn = document.getElementById('scanBarcodeBtn');
             const useSkuBtn = document.getElementById('useSkuBtn');
             const barcodeDisplay = document.getElementById('barcodeDisplay');
@@ -529,29 +530,25 @@
                 }
             }
 
-            // 🔥 FUNCIÓN PARA REPRODUCIR BEEP
-function reproducirBeep() {
-    try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        oscillator.frequency.value = 800; // Frecuencia del beep
-        gainNode.gain.value = 0.5; // Volumen
-        
-        oscillator.start();
-        
-        setTimeout(() => {
-            oscillator.stop();
-            audioCtx.close();
-        }, 200); // Duración 200ms
-    } catch (e) {
-        console.log('No se pudo reproducir beep', e);
-    }
-}
+            // ---------- VALIDACIÓN SKU ----------
+            skuInput.addEventListener('input', function() {
+                const sku = this.value.trim();
+                if (sku === '') {
+                    skuValidationMsg.classList.add('hidden');
+                    submitBtn.disabled = false;
+                    return;
+                }
+                if (skuCache.has(sku)) {
+                    skuValidationMsg.innerHTML = '<span class="sku-duplicate"><i class="fas fa-exclamation-triangle"></i> SKU DUPLICADO</span>';
+                    skuValidationMsg.classList.remove('hidden');
+                    submitBtn.disabled = true;
+                } else {
+                    skuValidationMsg.innerHTML = '<span class="sku-available"><i class="fas fa-check-circle"></i> SKU disponible</span>';
+                    skuValidationMsg.classList.remove('hidden');
+                    submitBtn.disabled = false;
+                }
+            });
+
             // ---------- 🎯 SOLUCIÓN DEFINITIVA - CÁMARA NATURAL ----------
             async function iniciarCamara() {
                 try {
@@ -588,28 +585,28 @@ function reproducirBeep() {
 
             // Función para escanear código con la API nativa de detección
             function escanearCodigo() {
-    if (!video.videoWidth) return;
-    
-    if ('BarcodeDetector' in window) {
-        const detector = new BarcodeDetector();
-        detector.detect(video).then(codes => {
-            if (codes.length > 0) {
-                const barcode = codes[0].rawValue;
-                barcodeHidden.value = barcode;
-                barcodeDisplay.innerHTML = `<i class="fas fa-check-circle" style="color:#C9A74D;"></i> ${barcode}`;
+                if (!video.videoWidth) return;
                 
-                // 🔊 REPRODUCIR BEEP AL DETECTAR CÓDIGO
-                reproducirBeep();
-                
-                detenerCamara();
-                scannerModal.classList.remove('active');
-                showMessage('✅ Código: ' + barcode, 'success');
+                // Usar la API de detección de códigos de barras si está disponible
+                if ('BarcodeDetector' in window) {
+                    const detector = new BarcodeDetector();
+                    detector.detect(video).then(codes => {
+                        if (codes.length > 0) {
+                            const barcode = codes[0].rawValue;
+                            barcodeHidden.value = barcode;
+                            barcodeDisplay.innerHTML = `<i class="fas fa-check-circle" style="color:#C9A74D;"></i> ${barcode}`;
+                            detenerCamara();
+                            scannerModal.classList.remove('active');
+                            showMessage('✅ Código: ' + barcode, 'success');
+                        }
+                    }).catch(err => {
+                        console.log('Error detección:', err);
+                    });
+                } else {
+                    // Fallback: Si no hay API, usar el método tradicional
+                    showMessage('📱 Esperando código...', 'success');
+                }
             }
-        }).catch(err => {
-            console.log('Error detección:', err);
-        });
-    }
-}
 
             // Función para detener la cámara
             function detenerCamara() {
@@ -686,6 +683,11 @@ function reproducirBeep() {
 
                 const sku = skuInput.value.trim();
                 
+                if (skuCache.has(sku)) {
+                    showMessage('❌ SKU duplicado', 'error');
+                    return;
+                }
+
                 const descripcion = document.getElementById('descripcion').value.trim();
                 const cantidad = document.getElementById('cantidad').value.trim();
 
@@ -718,7 +720,8 @@ function reproducirBeep() {
 
                     showMessage('✅ Artículo registrado', 'success');
                     resetForm();
-                                        
+                    skuCache.add(sku);
+                    
                 } catch (error) {
                     showMessage('Error de conexión', 'error');
                 } finally {
@@ -761,4 +764,3 @@ function reproducirBeep() {
     </script>
 </body>
 </html>
-
