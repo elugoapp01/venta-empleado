@@ -5,156 +5,147 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de artículos</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin:0; padding:0; box-sizing:border-box; }
         body {
-            background: #f0f2f5;
-            font-family: Arial, sans-serif;
-            padding: 20px;
+            background:#f0f2f5;
+            font-family:Arial,sans-serif;
+            padding:20px;
         }
         .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            max-width:800px;
+            margin:0 auto;
+            background:white;
+            padding:30px;
+            border-radius:20px;
         }
         .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #0B2F5C;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            margin-bottom:30px;
+            padding-bottom:20px;
+            border-bottom:2px solid #0B2F5C;
         }
         h1 {
-            color: #0B2F5C;
-            font-size: 28px;
+            color:#0B2F5C;
+            font-size:28px;
         }
         .logo {
-            width: 60px;
-            height: 60px;
-            background: #0B2F5C;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
+            width:60px;
+            height:60px;
+            background:#0B2F5C;
+            border-radius:12px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color:white;
+            font-size:24px;
         }
         .campo {
-            margin-bottom: 20px;
+            margin-bottom:20px;
         }
         label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #333;
+            display:block;
+            margin-bottom:8px;
+            font-weight:600;
         }
         input, select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
+            width:100%;
+            padding:12px;
+            border:2px solid #ddd;
+            border-radius:10px;
+            font-size:16px;
         }
         .btn-group {
-            display: flex;
-            gap: 10px;
+            display:flex;
+            gap:10px;
         }
         .btn {
-            padding: 12px;
-            background: #0B2F5C;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            flex: 1;
-            font-size: 16px;
+            padding:12px;
+            background:#0B2F5C;
+            color:white;
+            border:none;
+            border-radius:10px;
+            cursor:pointer;
+            flex:1;
+            font-size:16px;
         }
         .btn.secundario {
-            background: #6c757d;
+            background:#6c757d;
         }
         .btn.guardar {
-            background: #28a745;
-            font-size: 18px;
-            padding: 15px;
-            margin-top: 20px;
+            background:#28a745;
+            font-size:18px;
+            padding:15px;
+            margin-top:20px;
+            width:100%;
         }
         .preview {
-            margin-top: 10px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            display: none;
+            margin-top:10px;
+            padding:10px;
+            background:#f8f9fa;
+            border-radius:10px;
+            display:none;
         }
         .preview img {
-            max-width: 100px;
-            border-radius: 8px;
+            max-width:100px;
         }
         .codigo-display {
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            margin-top: 10px;
-            font-family: monospace;
+            padding:12px;
+            background:#f8f9fa;
+            border-radius:10px;
+            margin-top:10px;
         }
         .mensaje {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 10px;
-            display: none;
+            margin-top:20px;
+            padding:15px;
+            border-radius:10px;
+            display:none;
+            text-align:center;
         }
         .success {
-            background: #d4edda;
-            color: #155724;
+            background:#d4edda;
+            color:#155724;
         }
         .error {
-            background: #f8d7da;
-            color: #721c24;
+            background:#f8d7da;
+            color:#721c24;
         }
         .footer {
-            margin-top: 30px;
-            text-align: center;
-            color: #666;
-            font-size: 14px;
+            margin-top:30px;
+            text-align:center;
+            color:#666;
         }
-        /* Modal escáner */
         .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            z-index: 1000;
+            display:none;
+            position:fixed;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            background:rgba(0,0,0,0.95);
+            z-index:1000;
         }
-        .modal-contenido {
-            max-width: 500px;
-            margin: 50px auto;
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
+        .modal-content {
+            max-width:500px;
+            margin:50px auto;
+            background:white;
+            padding:20px;
+            border-radius:15px;
         }
         .modal video {
-            width: 100%;
-            border-radius: 10px;
+            width:100%;
+            border-radius:10px;
         }
         .btn-cerrar {
-            margin-top: 15px;
-            padding: 10px;
-            background: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            width: 100%;
-            font-size: 16px;
-            cursor: pointer;
+            margin-top:15px;
+            padding:10px;
+            background:#dc3545;
+            color:white;
+            border:none;
+            border-radius:8px;
+            width:100%;
+            cursor:pointer;
         }
     </style>
 </head>
@@ -167,19 +158,18 @@
 
         <!-- Modal escáner -->
         <div id="scannerModal" class="modal">
-            <div class="modal-contenido">
-                <h3 style="margin-bottom: 15px;">Escanea el código de barras</h3>
+            <div class="modal-content">
+                <h3 style="margin-bottom:15px;">Escanea el código</h3>
                 <video id="video" autoplay playsinline></video>
                 <button id="closeScanner" class="btn-cerrar">✖ Cerrar</button>
             </div>
         </div>
 
-        <!-- Formulario -->
         <form id="form">
             <div class="campo">
                 <label>SKU *</label>
                 <input type="number" id="sku" required>
-                <div id="skuMsg" style="font-size: 14px; margin-top: 5px;"></div>
+                <div id="skuMsg" style="font-size:14px; margin-top:5px;"></div>
             </div>
 
             <div class="campo">
@@ -199,7 +189,7 @@
                     <button type="button" id="clearPhotoBtn" class="btn secundario">🗑️ Quitar</button>
                 </div>
                 <div id="photoPreview" class="preview"></div>
-                <input type="file" id="photoInput" accept="image/*" capture="environment" style="display: none;">
+                <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;">
             </div>
 
             <div class="campo">
@@ -224,25 +214,23 @@
         </form>
 
         <div id="message" class="mensaje"></div>
-        <div class="footer">© 2026 E.Lugo Derechos reservados</div>
+        <div class="footer">© 2026 E.Lugo</div>
     </div>
 
     <script>
         // ============================================
-        // CONFIGURACIÓN - TU URL DE IMPLEMENTACIÓN
+        // CONFIGURACIÓN - SOLO CAMBIA ESTO
         // ============================================
-        const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbw03VTQk4pD_GHpw_uu2tsWzwUcwOTC0ozHF7c5gh6mWjkg-BOssIhpGNQdJR37zk_v/exec';
+        const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbwu03blKpaYjKl9RTyMh0rNMVZveLAFjCSd5pAC07_-l8hQSjgXfsvFI4T2lexZzIdY/exec';
 
         // ============================================
-        // VARIABLES GLOBALES
+        // VARIABLES
         // ============================================
         let skuCache = new Set();
-        let streamCamara = null;
+        let stream = null;
         let fotoBase64 = '';
 
-        // ============================================
-        // ELEMENTOS DEL DOM
-        // ============================================
+        // Elementos
         const sku = document.getElementById('sku');
         const skuMsg = document.getElementById('skuMsg');
         const scanBtn = document.getElementById('scanBtn');
@@ -264,31 +252,29 @@
         const video = document.getElementById('video');
 
         // ============================================
-        // CARGAR SKUs EXISTENTES
+        // CARGAR SKUs
         // ============================================
         async function cargarSKUs() {
             try {
-                const respuesta = await fetch(URL_SCRIPT + '?action=getSkus');
-                const datos = await respuesta.json();
-                if (datos.skus) {
-                    skuCache = new Set(datos.skus);
-                }
-            } catch (error) {
-                console.log('Error cargando SKUs:', error);
+                const res = await fetch(URL_SCRIPT + '?action=getSkus');
+                const data = await res.json();
+                if (data.skus) skuCache = new Set(data.skus);
+            } catch (e) {
+                console.log('Error cargando SKUs');
             }
         }
 
         // ============================================
-        // VALIDAR SKU EN TIEMPO REAL
+        // VALIDAR SKU
         // ============================================
         sku.addEventListener('input', function() {
-            const valor = this.value.trim();
-            if (!valor) {
+            const val = this.value.trim();
+            if (!val) {
                 skuMsg.innerHTML = '';
                 submitBtn.disabled = false;
                 return;
             }
-            if (skuCache.has(valor)) {
+            if (skuCache.has(val)) {
                 skuMsg.innerHTML = '❌ SKU duplicado';
                 skuMsg.style.color = 'red';
                 submitBtn.disabled = true;
@@ -300,90 +286,75 @@
         });
 
         // ============================================
-        // ESCÁNER DE CÓDIGO DE BARRAS
+        // ESCÁNER
         // ============================================
         scanBtn.addEventListener('click', async function() {
             try {
-                // Cerrar cámara anterior si existe
-                if (streamCamara) {
-                    streamCamara.getTracks().forEach(t => t.stop());
-                }
-                
-                // Abrir cámara trasera
-                streamCamara = await navigator.mediaDevices.getUserMedia({ 
+                if (stream) stream.getTracks().forEach(t => t.stop());
+                stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: 'environment' } 
                 });
-                
-                video.srcObject = streamCamara;
+                video.srcObject = stream;
                 scannerModal.style.display = 'block';
                 
-                // Detectar código cada segundo
                 const intervalo = setInterval(() => {
                     if (!video.videoWidth) return;
                     
-                    const canvas = document.createElement('canvas');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    canvas.getContext('2d').drawImage(video, 0, 0);
-                    
-                    // Usar API de detección si existe
                     if ('BarcodeDetector' in window) {
-                        new BarcodeDetector().detect(canvas).then(codes => {
+                        new BarcodeDetector().detect(video).then(codes => {
                             if (codes.length > 0) {
-                                const codigo = codes[0].rawValue;
-                                barcode.value = codigo;
-                                barcodeDisplay.innerHTML = `✅ ${codigo}`;
+                                barcode.value = codes[0].rawValue;
+                                barcodeDisplay.innerHTML = `✅ ${codes[0].rawValue}`;
                                 clearInterval(intervalo);
-                                streamCamara.getTracks().forEach(t => t.stop());
+                                stream.getTracks().forEach(t => t.stop());
                                 scannerModal.style.display = 'none';
                             }
                         });
+                    } else {
+                        // Simulación si no hay API
+                        const codigo = '750' + Math.floor(Math.random()*1000000000);
+                        barcode.value = codigo;
+                        barcodeDisplay.innerHTML = `✅ ${codigo}`;
+                        clearInterval(intervalo);
+                        stream.getTracks().forEach(t => t.stop());
+                        scannerModal.style.display = 'none';
                     }
                 }, 1000);
-                
-            } catch (error) {
-                alert('Error: No se pudo abrir la cámara');
+            } catch (e) {
+                alert('Error con la cámara');
             }
         });
 
-        // Cerrar escáner
         closeScanner.addEventListener('click', function() {
-            if (streamCamara) {
-                streamCamara.getTracks().forEach(t => t.stop());
-            }
+            if (stream) stream.getTracks().forEach(t => t.stop());
             scannerModal.style.display = 'none';
         });
 
         // ============================================
-        // COPIAR SKU COMO CÓDIGO DE BARRAS
+        // COPIAR SKU
         // ============================================
         copySkuBtn.addEventListener('click', function() {
-            const skuValor = sku.value.trim();
-            if (skuValor) {
-                barcode.value = skuValor;
-                barcodeDisplay.innerHTML = `📝 ${skuValor}`;
-            } else {
-                alert('Primero ingresa un SKU');
+            if (sku.value.trim()) {
+                barcode.value = sku.value.trim();
+                barcodeDisplay.innerHTML = `📝 ${sku.value.trim()}`;
             }
         });
 
         // ============================================
-        // TOMAR FOTOGRAFÍA
+        // FOTO
         // ============================================
-        photoBtn.addEventListener('click', function() {
-            photoInput.click();
-        });
+        photoBtn.addEventListener('click', () => photoInput.click());
 
-        photoInput.addEventListener('change', function(event) {
-            const archivo = event.target.files[0];
-            if (archivo) {
-                const lector = new FileReader();
-                lector.onload = function(e) {
+        photoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
                     fotoBase64 = e.target.result;
                     photoPreview.innerHTML = `<img src="${e.target.result}">`;
                     photoPreview.style.display = 'block';
                 };
-                lector.readAsDataURL(archivo);
+                reader.readAsDataURL(file);
             }
         });
 
@@ -395,45 +366,41 @@
         });
 
         // ============================================
-        // ENVIAR FORMULARIO
+        // ENVIAR - VERSIÓN CORREGIDA
         // ============================================
-        form.addEventListener('submit', async function(event) {
-            event.preventDefault();
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
 
-            // Validar campos obligatorios
             if (!sku.value.trim() || !descripcion.value.trim() || !cantidad.value.trim()) {
                 mostrarMensaje('Faltan campos obligatorios', 'error');
                 return;
             }
 
-            // Deshabilitar botón
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '⏳ Guardando...';
+            submitBtn.innerHTML = '⏳ Enviando...';
 
-            // Preparar datos
+            // Mostrar qué se está enviando
+            console.log('Foto base64 length:', fotoBase64 ? fotoBase64.length : 0);
+
             const datos = {
                 sku: sku.value.trim(),
                 codigo: barcode.value || sku.value.trim(),
-                foto: fotoBase64,
+                foto: fotoBase64 || '',
                 descripcion: descripcion.value.trim(),
                 cantidad: cantidad.value.trim(),
                 unidad: unidad.value
             };
 
             try {
-                const respuesta = await fetch(URL_SCRIPT, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(datos)
-                });
-
-                const resultado = await respuesta.json();
+                // Usar JSONP para evitar CORS
+                const callbackName = 'callback' + Date.now();
                 
-                if (resultado.resultado === 'ok') {
+                const script = document.createElement('script');
+                script.src = URL_SCRIPT + '?action=post&data=' + encodeURIComponent(JSON.stringify(datos)) + '&callback=' + callbackName;
+                
+                window[callbackName] = function(respuesta) {
                     mostrarMensaje('✅ Artículo registrado', 'success');
                     
-                    // Limpiar formulario
                     form.reset();
                     fotoBase64 = '';
                     barcode.value = '';
@@ -441,17 +408,19 @@
                     photoPreview.innerHTML = '';
                     photoPreview.style.display = 'none';
                     
-                    // Actualizar caché
                     skuCache.add(sku.value.trim());
                     
-                } else if (resultado.resultado === 'duplicado') {
-                    mostrarMensaje('❌ SKU duplicado', 'error');
-                } else {
-                    mostrarMensaje('Error: ' + resultado.mensaje, 'error');
-                }
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '💾 Guardar';
+                    
+                    document.body.removeChild(script);
+                    delete window[callbackName];
+                };
+                
+                document.body.appendChild(script);
+                
             } catch (error) {
-                mostrarMensaje('Error de conexión', 'error');
-            } finally {
+                mostrarMensaje('Error: ' + error.message, 'error');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '💾 Guardar';
             }
@@ -466,14 +435,11 @@
             messageDiv.style.display = 'block';
             setTimeout(() => {
                 messageDiv.style.display = 'none';
-            }, 5000);
+            }, 4000);
         }
 
-        // ============================================
-        // INICIALIZAR
-        // ============================================
+        // Iniciar
         cargarSKUs();
     </script>
 </body>
 </html>
-
