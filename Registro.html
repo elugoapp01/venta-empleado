@@ -771,24 +771,35 @@
             }
 
             // Obtener siguiente ID
-            async function getNextId(almacen) {
-                const prefix = almacen === 'INVENTARIOS' ? 'IN' : 'LI';
-                const snapshot = await db.collection('articulos').get();
-                let maxNum = 0;
-                
-                snapshot.forEach(doc => {
-                    const id = doc.id;
-                    if (id.startsWith(prefix)) {
-                        const numStr = id.replace(prefix, '');
-                        const num = parseInt(numStr, 10);
-                        if (!isNaN(num) && num > maxNum) {
-                            maxNum = num;
-                        }
-                    }
-                });
-                
-                return prefix + (maxNum + 1);
+
+// Obtener siguiente ID con formato 2 dígitos (IN01, IN02... IN99, luego IN100)
+async function getNextId(almacen) {
+    const prefix = almacen === 'INVENTARIOS' ? 'IN' : 'LI';
+    const snapshot = await db.collection('articulos').get();
+    let maxNum = 0;
+    
+    snapshot.forEach(doc => {
+        const id = doc.id;
+        if (id.startsWith(prefix)) {
+            // Extraer solo los números del ID
+            const numStr = id.replace(prefix, '');
+            const num = parseInt(numStr, 10);
+            if (!isNaN(num) && num > maxNum) {
+                maxNum = num;
             }
+        }
+    });
+    
+    const nextNum = maxNum + 1;
+    
+    // Formato: si es menor a 10, agregar cero a la izquierda (IN01, IN02...)
+    // Si es mayor o igual a 10, mostrar sin cero (IN10, IN11...)
+    if (nextNum < 10) {
+        return prefix + '0' + nextNum;
+    } else {
+        return prefix + nextNum;
+    }
+}
 
             // Buscar por SKU
             async function findArticuloBySku(sku) {
