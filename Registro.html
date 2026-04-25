@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>Registro de artículos · Sistema corporativo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #EFF2F7;
+            font-family: 'Inter', sans-serif;
+            color: #1E2B3C;
+            line-height: 1.5;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .page-container {
+            max-width: 1100px;
+            width: 100%;
+            background-color: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 35px -8px rgba(11, 47, 92, 0.08);
+            padding: 32px 30px;
+            margin: 10px auto;
+            border: 1px solid rgba(201, 167, 77, 0.15);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #E9ECF0;
+            padding-bottom: 18px;
+        }
+
+        .title-container {
+            flex: 1 1 auto;
+            text-align: left;
+        }
+
+        .page-title {
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: #0B2F5C;
+            letter-spacing: -0.5px;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+
+        .logo-img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            border-radius: 12px;
+            display: block;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px 28px;
+            margin-top: 10px;
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-field.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #2C3E58;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        label i {
+            color: #C9A74D;
+            width: 18px;
+            font-size: 0.95rem;
+        }
+
+        .required-star {
+            color: #C44536;
+            margin-left: 4px;
+        }
+
+        input, select {
+            background: #F9FBFD;
+            border: 1.5px solid #E2E7ED;
+            border-radius: 14px;
+            padding: 14px 18px;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s ease;
+            color: #1A2C3F;
+            width: 100%;
+        }
+
+        input:focus, select:focus {
+            border-color: #3A6D8C;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(58, 109, 140, 0.08);
+            background: white;
+        }
+
+        .camera-buttons-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        .camera-btn {
+            background: white;
+            border: 1.5px solid #DDE3EA;
+            border-radius: 14px;
+            padding: 12px 18px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #0B2F5C;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: 0.15s;
+            flex: 1 0 auto;
+            justify-content: center;
+            background: #F2F6FA;
+        }
+
+        .camera-btn i {
+            color: #3A6D8C;
+            font-size: 1.1rem;
+        }
+
+        .preview-area {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+            background: #F2F6FA;
+            border-radius: 16px;
+            padding: 12px 16px;
+        }
+
+        .preview-image {
+            max-width: 70px;
+            max-height: 70px;
+            border-radius: 12px;
+            border: 2px solid white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            object-fit: cover;
+        }
+
+        .barcode-preview {
+            font-family: monospace;
+            background: white;
+            padding: 6px 14px;
+            border-radius: 30px;
+            color: #1E3B4F;
+            font-size: 0.9rem;
+            border: 1px solid #C9A74D;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 150px;
+        }
+
+        .btn-submit {
+            background: #0B2F5C;
+            border: none;
+            border-radius: 40px;
+            padding: 18px 48px;
+            color: white;
+            font-weight: 700;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 10px 18px -6px #0B2F5C;
+            border: 1px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.5px;
+            margin: 40px auto 0;
+        }
+
+        .btn-submit i {
+            color: #C9A74D;
+            font-size: 1.3rem;
+        }
+
+        .btn-submit:hover {
+            background: #16486C;
+            transform: scale(1.02);
+            box-shadow: 0 16px 22px -8px #0B2F5C;
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .sheet-message {
+            margin-top: 25px;
+            padding: 16px 24px;
+            border-radius: 50px;
+            font-weight: 500;
+            text-align: center;
+            display: none;
+        }
+
+        .sheet-message.success {
+            background: #EAF6ED;
+            color: #1F6C4A;
+            border-left: 6px solid #2A8E5C;
+            display: block;
+        }
+
+        .sheet-message.error {
+            background: #FFEFED;
+            color: #A13A2F;
+            border-left-color: #C44536;
+            display: block;
+        }
+
+        .sheet-message.warning {
+            background: #FFF8E7;
+            color: #B76E00;
+            border-left-color: #C9A74D;
+            display: block;
+        }
+
+        .credits {
+            margin-top: 20px;
+            color: #6C8196;
+            font-size: 0.8rem;
+            text-align: center;
+            border-top: 1px solid #E2E8F0;
+            padding-top: 20px;
+            font-weight: 500;
+        }
+
+        .credits i {
+            color: #C9A74D;
+            margin-right: 5px;
+        }
+
+        .scanner-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.98);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .scanner-modal.active {
+            display: flex;
+        }
+
+        .scanner-container {
+            width: 95%;
+            max-width: 600px;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .scanner-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .scanner-header h3 {
+            color: #0B2F5C;
+            margin: 0;
+        }
+
+        #scanner-viewport {
+            width: 100%;
+            height: 350px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            position: relative;
+            border: 2px solid #C9A74D;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .scanner-close {
+            background: #C44536;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .scanner-close:hover {
+            background: #a5372b;
+        }
+
+        /* Modal de confirmación */
+        .confirm-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 10001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .confirm-modal.active {
+            display: flex;
+        }
+
+        .confirm-modal-content {
+            background: white;
+            border-radius: 28px;
+            padding: 28px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .confirm-modal-content h3 {
+            color: #0B2F5C;
+            margin-bottom: 20px;
+        }
+
+        .confirm-modal-content p {
+            margin: 10px 0;
+            color: #2C3E58;
+        }
+
+        .confirm-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            justify-content: center;
+        }
+
+        .confirm-btn-yes {
+            background: #0B2F5C;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .confirm-btn-no {
+            background: #E2E7ED;
+            color: #1E2B3C;
+            border: none;
+            border-radius: 40px;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* Modal de resultado */
+        .result-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 10002;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .result-modal.active {
+            display: flex;
+        }
+
+        .result-modal-content {
+            background: white;
+            border-radius: 28px;
+            padding: 32px;
+            max-width: 380px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .result-modal-content h3 {
+            color: #1F6C4A;
+            margin-bottom: 20px;
+        }
+
+        .result-id {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #C9A74D;
+            background: #F2F6FA;
+            padding: 15px;
+            border-radius: 16px;
+            margin: 15px 0;
+            letter-spacing: 2px;
+        }
+
+        .result-close {
+            background: #0B2F5C;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 12px 28px;
+            margin-top: 20px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .hidden-field {
+            display: none;
+        }
+
+        @media (max-width: 650px) {
+            .page-container { padding: 22px 18px; }
+            .page-title { font-size: 1.5rem; }
+            .logo-img { width: 70px; height: 70px; }
+        }
+        @media (max-width: 480px) {
+            .header { 
+                justify-content: center; 
+                gap: 15px;
+            }
+            .title-container { order: 2; width: 100%; text-align: center; }
+            .logo-area { order: 1; margin-right: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <div class="header">
+            <div class="logo-area">
+                <img src="logo.png" alt="Logo" class="logo-img" onerror="this.src='https://via.placeholder.com/80x80/0B2F5C/ffffff?text=®'; this.onerror=null;">
+            </div>
+            <div class="title-container">
+                <h1 class="page-title">Registro de artículos</h1>
+            </div>
+        </div>
+
+        <!-- MODAL DEL ESCÁNER -->
+        <div id="scannerModal" class="scanner-modal">
+            <div class="scanner-container">
+                <div class="scanner-header">
+                    <h3><i class="fas fa-camera"></i> Escanear código de barras</h3>
+                    <span style="color: #3A6D8C; font-size: 0.9rem;">Apunte la cámara al código</span>
+                </div>
+                <div id="scanner-viewport">
+                    <video id="barcode-video" playsinline autoplay muted></video>
+                </div>
+                <button id="closeScannerBtn" class="scanner-close">
+                    <i class="fas fa-times-circle"></i> Cerrar escáner
+                </button>
+            </div>
+        </div>
+
+        <!-- MODAL DE CONFIRMACIÓN (auto-llenado) -->
+        <div id="confirmModal" class="confirm-modal">
+            <div class="confirm-modal-content">
+                <h3><i class="fas fa-exclamation-triangle"></i> SKU ya registrado</h3>
+                <p id="confirmMessage">Este SKU ya existe con unidad X</p>
+                <p>¿Deseas cargar los datos existentes?</p>
+                <div class="confirm-buttons">
+                    <button id="confirmYesBtn" class="confirm-btn-yes">Sí, cargar</button>
+                    <button id="confirmNoBtn" class="confirm-btn-no">No, continuar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL DE RESULTADO (ID generado) -->
+        <div id="resultModal" class="result-modal">
+            <div class="result-modal-content">
+                <h3><i class="fas fa-check-circle"></i> Artículo guardado</h3>
+                <p><strong>SKU:</strong> <span id="resultSku"></span></p>
+                <p><strong>Descripción:</strong> <span id="resultDescripcion"></span></p>
+                <p><strong>ID Único:</strong></p>
+                <div class="result-id" id="resultId"></div>
+                <button class="result-close" id="closeResultBtn">Aceptar</button>
+            </div>
+        </div>
+
+        <form id="articuloForm">
+            <div class="form-grid">
+                <div class="form-field">
+                    <label><i class="fas fa-hashtag"></i> SKU <span class="required-star">*</span></label>
+                    <input type="number" id="sku" placeholder="Ej. 123456789" step="1" min="0" required>
+                </div>
+
+                <div class="form-field">
+                    <label><i class="fas fa-barcode"></i> Código de barras</label>
+                    <div class="camera-buttons-group">
+                        <button type="button" id="scanBarcodeBtn" class="camera-btn">
+                            <i class="fas fa-camera"></i> Escanear
+                        </button>
+                        <button type="button" id="useSkuBtn" class="camera-btn">
+                            <i class="fas fa-copy"></i> Usar SKU
+                        </button>
+                        <span id="barcodeDisplay" class="barcode-preview">
+                            <i class="fas fa-qrcode"></i> Sin escanear
+                        </span>
+                    </div>
+                    <input type="hidden" id="barcode" value="">
+                </div>
+
+                <div class="form-field full-width">
+                    <label><i class="fas fa-camera-retro"></i> Fotografía</label>
+                    <div class="camera-buttons-group">
+                        <button type="button" id="takePhotoBtn" class="camera-btn">
+                            <i class="fas fa-camera"></i> Tomar foto
+                        </button>
+                        <button type="button" id="clearPhotoBtn" class="camera-btn">
+                            <i class="fas fa-trash-alt"></i> Quitar
+                        </button>
+                    </div>
+                    <div id="photoPreviewContainer" class="preview-area" style="display: none;">
+                        <img id="photoPreview" class="preview-image" src="#" alt="Vista previa">
+                        <span><i class="fas fa-check-circle" style="color:#C9A74D;"></i> Foto lista</span>
+                    </div>
+                    <input type="file" id="photoInput" accept="image/*" capture="environment" style="display: none;">
+                    <input type="hidden" id="photoBase64" value="">
+                </div>
+
+                <div class="form-field">
+                    <label><i class="fas fa-align-left"></i> Descripción <span class="required-star">*</span></label>
+                    <input type="text" id="descripcion" placeholder="Ej. Pantalón casual" maxlength="120" required>
+                </div>
+
+                <div class="form-field">
+                    <label><i class="fas fa-cubes"></i> Cantidad <span class="required-star">*</span></label>
+                    <input type="number" id="cantidad" placeholder="0" min="0" step="1" required>
+                </div>
+
+                <div class="form-field">
+                    <label><i class="fas fa-tag"></i> Unidad de venta</label>
+                    <select id="unidadVenta">
+                        <option value="PIEZA">Pieza</option>
+                        <option value="CAJA">Caja</option>
+                    </select>
+                </div>
+
+                <!-- Campo PZ X CAJA - oculto por defecto -->
+                <div class="form-field" id="pzXCajaContainer" style="display: none;">
+                    <label><i class="fas fa-boxes"></i> PZ X CAJA <span class="required-star">*</span></label>
+                    <input type="number" id="pzXCaja" placeholder="Ej. 12" min="1" step="1">
+                </div>
+
+                <div class="form-field">
+                    <label><i class="fas fa-warehouse"></i> Almacén <span class="required-star">*</span></label>
+                    <select id="almacen" required>
+                        <option value="">Seleccionar...</option>
+                        <option value="INVENTARIOS">INVENTARIOS</option>
+                        <option value="LOGISTICA INVERSA">LOGISTICA INVERSA</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn" class="btn-submit">
+                <i class="fas fa-save"></i> Guardar
+            </button>
+            
+            <div id="message" class="sheet-message"></div>
+        </form>
+        
+        <div class="credits">
+            <i class="fas fa-copyright"></i> 2026 E.Lugo Derechos reservados
+        </div>
+    </div>
+
+    <script>
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAOmMmesMJ1rpP5gZnJt0w3ZuXK9VmKd9w",
+            authDomain: "turnos-evento.firebaseapp.com",
+            projectId: "turnos-evento",
+            storageBucket: "turnos-evento.firebasestorage.app",
+            messagingSenderId: "108395086341",
+            appId: "1:108395086341:web:3e9d7bef67aa28bf78126c"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        (function() {
+            "use strict";
+
+            let pendingSkuData = null; // Para almacenar datos cuando se confirma auto-llenado
+            let confirmCallback = null;
+            let stream = null;
+            let scanInterval = null;
+
+            // Elementos del DOM
+            const skuInput = document.getElementById('sku');
+            const barcodeDisplay = document.getElementById('barcodeDisplay');
+            const barcodeHidden = document.getElementById('barcode');
+            const unidadVentaSelect = document.getElementById('unidadVenta');
+            const pzXCajaContainer = document.getElementById('pzXCajaContainer');
+            const pzXCajaInput = document.getElementById('pzXCaja');
+            const almacenSelect = document.getElementById('almacen');
+            const descripcionInput = document.getElementById('descripcion');
+            const cantidadInput = document.getElementById('cantidad');
+            const photoBase64Input = document.getElementById('photoBase64');
+            const photoPreviewContainer = document.getElementById('photoPreviewContainer');
+            const photoPreview = document.getElementById('photoPreview');
+            const photoInput = document.getElementById('photoInput');
+            const form = document.getElementById('articuloForm');
+            const submitBtn = document.getElementById('submitBtn');
+            const msgDiv = document.getElementById('message');
+            
+            // Modales
+            const scannerModal = document.getElementById('scannerModal');
+            const closeScannerBtn = document.getElementById('closeScannerBtn');
+            const video = document.getElementById('barcode-video');
+            const confirmModal = document.getElementById('confirmModal');
+            const confirmYesBtn = document.getElementById('confirmYesBtn');
+            const confirmNoBtn = document.getElementById('confirmNoBtn');
+            const confirmMessage = document.getElementById('confirmMessage');
+            const resultModal = document.getElementById('resultModal');
+            const closeResultBtn = document.getElementById('closeResultBtn');
+            const resultSku = document.getElementById('resultSku');
+            const resultDescripcion = document.getElementById('resultDescripcion');
+            const resultId = document.getElementById('resultId');
+
+            // Mostrar/ocultar PZ X CAJA según unidad de venta
+            function togglePzXCaja() {
+                if (unidadVentaSelect.value === 'CAJA') {
+                    pzXCajaContainer.style.display = 'flex';
+                    pzXCajaInput.required = true;
+                } else {
+                    pzXCajaContainer.style.display = 'none';
+                    pzXCajaInput.required = false;
+                    pzXCajaInput.value = '';
+                }
+            }
+
+            unidadVentaSelect.addEventListener('change', togglePzXCaja);
+
+            // Reproducir beep
+            function reproducirBeep() {
+                try {
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    oscillator.frequency.value = 800;
+                    gainNode.gain.value = 0.5;
+                    oscillator.start();
+                    setTimeout(() => {
+                        oscillator.stop();
+                        audioCtx.close();
+                    }, 200);
+                } catch (e) {
+                    console.log('No se pudo reproducir beep', e);
+                }
+            }
+
+            // Mostrar mensaje
+            function showMessage(text, type) {
+                msgDiv.textContent = text;
+                msgDiv.className = 'sheet-message ' + type;
+                msgDiv.style.display = 'block';
+                setTimeout(() => {
+                    msgDiv.style.display = 'none';
+                }, 4000);
+            }
+
+            // Resetear formulario
+            function resetForm() {
+                form.reset();
+                barcodeHidden.value = '';
+                barcodeDisplay.innerHTML = '<i class="fas fa-qrcode"></i> Sin escanear';
+                photoBase64Input.value = '';
+                photoPreviewContainer.style.display = 'none';
+                photoPreview.src = '#';
+                photoInput.value = '';
+                pzXCajaContainer.style.display = 'none';
+                almacenSelect.value = '';
+                togglePzXCaja();
+            }
+
+            // Generar timestamp CDMX
+            function getCDMXTimestamp() {
+                const now = new Date();
+                const options = {
+                    timeZone: 'America/Mexico_City',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                };
+                return now.toLocaleString('es-MX', options);
+            }
+
+            // Obtener siguiente ID secuencial para un almacén
+            async function getNextId(almacen) {
+                const prefix = almacen === 'INVENTARIOS' ? 'IN' : 'LI';
+                
+                // Buscar todos los documentos con ese prefijo
+                const snapshot = await db.collection('articulos').get();
+                let maxNum = 0;
+                
+                snapshot.forEach(doc => {
+                    const id = doc.id;
+                    if (id.startsWith(prefix)) {
+                        const numStr = id.replace(prefix, '');
+                        const num = parseInt(numStr, 10);
+                        if (!isNaN(num) && num > maxNum) {
+                            maxNum = num;
+                        }
+                    }
+                });
+                
+                const nextNum = maxNum + 1;
+                return prefix + nextNum;
+            }
+
+            // Buscar artículo por SKU
+            async function findArticuloBySku(sku) {
+                const snapshot = await db.collection('articulos')
+                    .where('sku', '==', sku)
+                    .limit(1)
+                    .get();
+                
+                if (!snapshot.empty) {
+                    let doc = null;
+                    let docId = null;
+                    snapshot.forEach(d => {
+                        doc = d.data();
+                        docId = d.id;
+                    });
+                    return { exists: true, data: doc, id: docId };
+                }
+                return { exists: false };
+            }
+
+            // Buscar si ya existe SKU + Unidad de venta
+            async function findArticuloBySkuAndUnidad(sku, unidadVenta) {
+                const snapshot = await db.collection('articulos')
+                    .where('sku', '==', sku)
+                    .where('unidad_venta', '==', unidadVenta)
+                    .limit(1)
+                    .get();
+                
+                if (!snapshot.empty) {
+                    let doc = null;
+                    let docId = null;
+                    snapshot.forEach(d => {
+                        doc = d.data();
+                        docId = d.id;
+                    });
+                    return { exists: true, data: doc, id: docId };
+                }
+                return { exists: false };
+            }
+
+            // Auto-llenar formulario con datos existentes
+            function autoFillForm(data) {
+                if (data.descripcion) descripcionInput.value = data.descripcion;
+                if (data.unidad_venta) {
+                    unidadVentaSelect.value = data.unidad_venta;
+                    togglePzXCaja();
+                }
+                if (data.pz_x_caja) pzXCajaInput.value = data.pz_x_caja;
+                if (data.codigo_barras) {
+                    barcodeHidden.value = data.codigo_barras;
+                    barcodeDisplay.innerHTML = `<i class="fas fa-check-circle" style="color:#C9A74D;"></i> ${data.codigo_barras}`;
+                }
+                if (data.fotografia) {
+                    photoBase64Input.value = data.fotografia;
+                    photoPreview.src = data.fotografia;
+                    photoPreviewContainer.style.display = 'flex';
+                }
+                if (data.almacen) almacenSelect.value = data.almacen;
+                
+                showMessage('✅ Datos cargados automáticamente', 'success');
+            }
+
+            // Evento SKU (búsqueda con confirmación)
+            skuInput.addEventListener('blur', async function() {
+                const sku = skuInput.value.trim();
+                if (!sku) return;
+                
+                const result = await findArticuloBySku(sku);
+                
+                if (result.exists) {
+                    const existingUnidad = result.data.unidad_venta;
+                    const currentUnidad = unidadVentaSelect.value;
+                    
+                    // Mostrar mensaje de confirmación
+                    confirmMessage.innerHTML = `Este SKU ya existe con unidad de venta: <strong>${existingUnidad}</strong>`;
+                    pendingSkuData = result.data;
+                    confirmModal.classList.add('active');
+                    
+                    // Guardar callback para después
+                    confirmCallback = (cargar) => {
+                        if (cargar) {
+                            autoFillForm(result.data);
+                        }
+                        confirmModal.classList.remove('active');
+                        pendingSkuData = null;
+                    };
+                }
+            });
+
+            confirmYesBtn.addEventListener('click', () => {
+                if (confirmCallback) confirmCallback(true);
+            });
+            
+            confirmNoBtn.addEventListener('click', () => {
+                if (confirmCallback) confirmCallback(false);
+            });
+
+            // Escáner de código de barras
+            async function iniciarCamara() {
+                try {
+                    detenerCamara();
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+                    });
+                    video.srcObject = stream;
+                    await video.play();
+                    scannerModal.classList.add('active');
+                    scanInterval = setInterval(escanearCodigo, 500);
+                } catch (error) {
+                    showMessage('❌ Permiso denegado o no hay cámara', 'error');
+                    scannerModal.classList.remove('active');
+                }
+            }
+
+            function escanearCodigo() {
+                if (!video.videoWidth) return;
+                if ('BarcodeDetector' in window) {
+                    const detector = new BarcodeDetector();
+                    detector.detect(video).then(codes => {
+                        if (codes.length > 0) {
+                            const barcode = codes[0].rawValue;
+                            barcodeHidden.value = barcode;
+                            barcodeDisplay.innerHTML = `<i class="fas fa-check-circle" style="color:#C9A74D;"></i> ${barcode}`;
+                            reproducirBeep();
+                            detenerCamara();
+                            scannerModal.classList.remove('active');
+                            showMessage('✅ Código: ' + barcode, 'success');
+                        }
+                    }).catch(err => console.log('Error detección:', err));
+                }
+            }
+
+            function detenerCamara() {
+                if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+                if (stream) { stream.getTracks().forEach(track => track.stop()); stream = null; }
+                video.srcObject = null;
+            }
+
+            document.getElementById('scanBarcodeBtn').addEventListener('click', () => iniciarCamara());
+            closeScannerBtn.addEventListener('click', () => {
+                detenerCamara();
+                scannerModal.classList.remove('active');
+            });
+
+            document.getElementById('useSkuBtn').addEventListener('click', () => {
+                const sku = skuInput.value.trim();
+                if (sku) {
+                    barcodeHidden.value = sku;
+                    barcodeDisplay.innerHTML = `<i class="fas fa-copy" style="color:#C9A74D;"></i> ${sku} (SKU)`;
+                    showMessage('✅ Código asignado desde SKU', 'success');
+                } else {
+                    showMessage('❌ Ingresa un SKU primero', 'error');
+                }
+            });
+
+            // Fotografía
+            document.getElementById('takePhotoBtn').addEventListener('click', () => photoInput.click());
+            photoInput.addEventListener('change', function(event) {
+                if (event.target.files && event.target.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        photoPreview.src = e.target.result;
+                        photoBase64Input.value = e.target.result;
+                        photoPreviewContainer.style.display = 'flex';
+                    };
+                    reader.readAsDataURL(event.target.files[0]);
+                }
+            });
+            document.getElementById('clearPhotoBtn').addEventListener('click', () => {
+                photoInput.value = '';
+                photoBase64Input.value = '';
+                photoPreviewContainer.style.display = 'none';
+                photoPreview.src = '#';
+            });
+
+            // Envío del formulario
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const sku = skuInput.value.trim();
+                const descripcion = descripcionInput.value.trim();
+                const cantidad = cantidadInput.value.trim();
+                const almacen = almacenSelect.value;
+                const unidadVenta = unidadVentaSelect.value;
+                const pzXCaja = unidadVenta === 'CAJA' ? pzXCajaInput.value : null;
+
+                if (!sku || !descripcion || !cantidad || !almacen) {
+                    showMessage('Completa todos los campos obligatorios', 'error');
+                    return;
+                }
+
+                if (unidadVenta === 'CAJA' && (!pzXCaja || pzXCaja <= 0)) {
+                    showMessage('Ingresa las piezas por caja', 'error');
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Guardando...';
+
+                try {
+                    // Verificar si ya existe SKU + Unidad de venta
+                    const existing = await findArticuloBySkuAndUnidad(sku, unidadVenta);
+                    let idUnico;
+
+                    if (existing.exists) {
+                        // Usar ID existente
+                        idUnico = existing.id;
+                    } else {
+                        // Generar nuevo ID
+                        idUnico = await getNextId(almacen);
+                    }
+
+                    const articuloData = {
+                        sku: sku,
+                        codigo_barras: barcodeHidden.value || sku,
+                        fotografia: photoBase64Input.value || '',
+                        descripcion: descripcion,
+                        cantidad: parseInt(cantidad),
+                        unidad_venta: unidadVenta,
+                        pz_x_caja: pzXCaja ? parseInt(pzXCaja) : null,
+                        almacen: almacen,
+                        timestamp: getCDMXTimestamp(),
+                        fuente: 'registro-articulos'
+                    };
+
+                    // Guardar en Firestore usando el ID generado
+                    await db.collection('articulos').doc(idUnico).set(articuloData);
+
+                    // Mostrar modal con resultado
+                    resultSku.textContent = sku;
+                    resultDescripcion.textContent = descripcion;
+                    resultId.textContent = idUnico;
+                    resultModal.classList.add('active');
+
+                    resetForm();
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    showMessage('Error al guardar: ' + error.message, 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-save"></i> Guardar';
+                }
+            });
+
+            closeResultBtn.addEventListener('click', () => {
+                resultModal.classList.remove('active');
+            });
+
+            togglePzXCaja();
+
+            if (location.protocol !== 'https:' && !location.hostname.includes('localhost')) {
+                showMessage('⚠️ Esta página requiere HTTPS para usar la cámara', 'error');
+            }
+        })();
+    </script>
+</body>
+</html>
