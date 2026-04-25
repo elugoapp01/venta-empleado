@@ -356,7 +356,6 @@
             background: #a5372b;
         }
 
-        /* Modal de confirmación */
         .confirm-modal {
             display: none;
             position: fixed;
@@ -420,7 +419,6 @@
             font-weight: 600;
         }
 
-        /* Modal de resultado */
         .result-modal {
             display: none;
             position: fixed;
@@ -520,11 +518,11 @@
             </div>
         </div>
 
-        <!-- MODAL DE CONFIRMACIÓN (auto-llenado) -->
+        <!-- MODAL DE CONFIRMACIÓN -->
         <div id="confirmModal" class="confirm-modal">
             <div class="confirm-modal-content">
                 <h3><i class="fas fa-exclamation-triangle"></i> SKU ya registrado</h3>
-                <p id="confirmMessage">Este SKU ya existe con unidad X</p>
+                <p id="confirmMessage"></p>
                 <p>¿Deseas cargar los datos existentes?</p>
                 <div class="confirm-buttons">
                     <button id="confirmYesBtn" class="confirm-btn-yes">Sí, cargar</button>
@@ -533,7 +531,7 @@
             </div>
         </div>
 
-        <!-- MODAL DE RESULTADO (ID generado) -->
+        <!-- MODAL DE RESULTADO -->
         <div id="resultModal" class="result-modal">
             <div class="result-modal-content">
                 <h3><i class="fas fa-check-circle"></i> Artículo guardado</h3>
@@ -604,7 +602,6 @@
                     </select>
                 </div>
 
-                <!-- Campo PZ X CAJA - oculto por defecto -->
                 <div class="form-field" id="pzXCajaContainer" style="display: none;">
                     <label><i class="fas fa-boxes"></i> PZ X CAJA <span class="required-star">*</span></label>
                     <input type="number" id="pzXCaja" placeholder="Ej. 12" min="1" step="1">
@@ -633,24 +630,25 @@
     </div>
 
     <script>
-        // Configuración de Firebase
+        // ========== CONFIGURACIÓN DE FIREBASE ==========
         const firebaseConfig = {
-            apiKey: "AIzaSyAOmMmesMJ1rpP5gZnJt0w3ZuXK9VmKd9w",
-            authDomain: "turnos-evento.firebaseapp.com",
-            projectId: "turnos-evento",
-            storageBucket: "turnos-evento.firebasestorage.app",
-            messagingSenderId: "108395086341",
-            appId: "1:108395086341:web:3e9d7bef67aa28bf78126c"
+            apiKey: "AIzaSyA0wUh8AqTOT36ofTMVHdKSRqWZ1MMhHzY",
+            authDomain: "venta-empleado.firebaseapp.com",
+            projectId: "venta-empleado",
+            storageBucket: "venta-empleado.firebasestorage.app",
+            messagingSenderId: "655370302032",
+            appId: "1:655370302032:web:bc276acc7683a67b49d755"
         };
 
         // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        // ==============================================
 
         (function() {
             "use strict";
 
-            let pendingSkuData = null; // Para almacenar datos cuando se confirma auto-llenado
+            let pendingSkuData = null;
             let confirmCallback = null;
             let stream = null;
             let scanInterval = null;
@@ -687,7 +685,7 @@
             const resultDescripcion = document.getElementById('resultDescripcion');
             const resultId = document.getElementById('resultId');
 
-            // Mostrar/ocultar PZ X CAJA según unidad de venta
+            // Mostrar/ocultar PZ X CAJA
             function togglePzXCaja() {
                 if (unidadVentaSelect.value === 'CAJA') {
                     pzXCajaContainer.style.display = 'flex';
@@ -701,7 +699,7 @@
 
             unidadVentaSelect.addEventListener('change', togglePzXCaja);
 
-            // Reproducir beep
+            // Beep
             function reproducirBeep() {
                 try {
                     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -710,18 +708,15 @@
                     oscillator.connect(gainNode);
                     gainNode.connect(audioCtx.destination);
                     oscillator.frequency.value = 800;
-                    gainNode.gain.value = 0.5;
+                    gainNode.gain.value = 0.3;
                     oscillator.start();
                     setTimeout(() => {
                         oscillator.stop();
                         audioCtx.close();
-                    }, 200);
-                } catch (e) {
-                    console.log('No se pudo reproducir beep', e);
-                }
+                    }, 150);
+                } catch (e) {}
             }
 
-            // Mostrar mensaje
             function showMessage(text, type) {
                 msgDiv.textContent = text;
                 msgDiv.className = 'sheet-message ' + type;
@@ -731,7 +726,6 @@
                 }, 4000);
             }
 
-            // Resetear formulario
             function resetForm() {
                 form.reset();
                 barcodeHidden.value = '';
@@ -741,31 +735,17 @@
                 photoPreview.src = '#';
                 photoInput.value = '';
                 pzXCajaContainer.style.display = 'none';
-                almacenSelect.value = '';
                 togglePzXCaja();
             }
 
-            // Generar timestamp CDMX
             function getCDMXTimestamp() {
                 const now = new Date();
-                const options = {
-                    timeZone: 'America/Mexico_City',
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false
-                };
-                return now.toLocaleString('es-MX', options);
+                return now.toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
             }
 
-            // Obtener siguiente ID secuencial para un almacén
+            // Obtener siguiente ID
             async function getNextId(almacen) {
                 const prefix = almacen === 'INVENTARIOS' ? 'IN' : 'LI';
-                
-                // Buscar todos los documentos con ese prefijo
                 const snapshot = await db.collection('articulos').get();
                 let maxNum = 0;
                 
@@ -780,50 +760,58 @@
                     }
                 });
                 
-                const nextNum = maxNum + 1;
-                return prefix + nextNum;
+                return prefix + (maxNum + 1);
             }
 
-            // Buscar artículo por SKU
+            // Buscar por SKU
             async function findArticuloBySku(sku) {
-                const snapshot = await db.collection('articulos')
-                    .where('sku', '==', sku)
-                    .limit(1)
-                    .get();
-                
-                if (!snapshot.empty) {
-                    let doc = null;
-                    let docId = null;
-                    snapshot.forEach(d => {
-                        doc = d.data();
-                        docId = d.id;
-                    });
-                    return { exists: true, data: doc, id: docId };
+                try {
+                    const snapshot = await db.collection('articulos')
+                        .where('sku', '==', sku)
+                        .limit(1)
+                        .get();
+                    
+                    if (!snapshot.empty) {
+                        let docData = null;
+                        let docId = null;
+                        snapshot.forEach(d => {
+                            docData = d.data();
+                            docId = d.id;
+                        });
+                        return { exists: true, data: docData, id: docId };
+                    }
+                    return { exists: false };
+                } catch (error) {
+                    console.error('Error al buscar:', error);
+                    return { exists: false };
                 }
-                return { exists: false };
             }
 
-            // Buscar si ya existe SKU + Unidad de venta
+            // Buscar por SKU + Unidad
             async function findArticuloBySkuAndUnidad(sku, unidadVenta) {
-                const snapshot = await db.collection('articulos')
-                    .where('sku', '==', sku)
-                    .where('unidad_venta', '==', unidadVenta)
-                    .limit(1)
-                    .get();
-                
-                if (!snapshot.empty) {
-                    let doc = null;
-                    let docId = null;
-                    snapshot.forEach(d => {
-                        doc = d.data();
-                        docId = d.id;
-                    });
-                    return { exists: true, data: doc, id: docId };
+                try {
+                    const snapshot = await db.collection('articulos')
+                        .where('sku', '==', sku)
+                        .where('unidad_venta', '==', unidadVenta)
+                        .limit(1)
+                        .get();
+                    
+                    if (!snapshot.empty) {
+                        let docData = null;
+                        let docId = null;
+                        snapshot.forEach(d => {
+                            docData = d.data();
+                            docId = d.id;
+                        });
+                        return { exists: true, data: docData, id: docId };
+                    }
+                    return { exists: false };
+                } catch (error) {
+                    console.error('Error al buscar:', error);
+                    return { exists: false };
                 }
-                return { exists: false };
             }
 
-            // Auto-llenar formulario con datos existentes
             function autoFillForm(data) {
                 if (data.descripcion) descripcionInput.value = data.descripcion;
                 if (data.unidad_venta) {
@@ -845,31 +833,28 @@
                 showMessage('✅ Datos cargados automáticamente', 'success');
             }
 
-            // Evento SKU (búsqueda con confirmación)
-            skuInput.addEventListener('blur', async function() {
-                const sku = skuInput.value.trim();
-                if (!sku) return;
-                
-                const result = await findArticuloBySku(sku);
-                
-                if (result.exists) {
-                    const existingUnidad = result.data.unidad_venta;
-                    const currentUnidad = unidadVentaSelect.value;
+            // Evento SKU
+            let skuTimeout;
+            skuInput.addEventListener('input', function() {
+                clearTimeout(skuTimeout);
+                skuTimeout = setTimeout(async () => {
+                    const sku = skuInput.value.trim();
+                    if (!sku) return;
                     
-                    // Mostrar mensaje de confirmación
-                    confirmMessage.innerHTML = `Este SKU ya existe con unidad de venta: <strong>${existingUnidad}</strong>`;
-                    pendingSkuData = result.data;
-                    confirmModal.classList.add('active');
+                    const result = await findArticuloBySku(sku);
                     
-                    // Guardar callback para después
-                    confirmCallback = (cargar) => {
-                        if (cargar) {
-                            autoFillForm(result.data);
-                        }
-                        confirmModal.classList.remove('active');
-                        pendingSkuData = null;
-                    };
-                }
+                    if (result.exists) {
+                        confirmMessage.innerHTML = `Este SKU ya existe con unidad de venta: <strong>${result.data.unidad_venta}</strong>`;
+                        pendingSkuData = result.data;
+                        confirmModal.classList.add('active');
+                        
+                        confirmCallback = (cargar) => {
+                            if (cargar) autoFillForm(result.data);
+                            confirmModal.classList.remove('active');
+                            pendingSkuData = null;
+                        };
+                    }
+                }, 500);
             });
 
             confirmYesBtn.addEventListener('click', () => {
@@ -880,7 +865,7 @@
                 if (confirmCallback) confirmCallback(false);
             });
 
-            // Escáner de código de barras
+            // Escáner
             async function iniciarCamara() {
                 try {
                     detenerCamara();
@@ -892,7 +877,7 @@
                     scannerModal.classList.add('active');
                     scanInterval = setInterval(escanearCodigo, 500);
                 } catch (error) {
-                    showMessage('❌ Permiso denegado o no hay cámara', 'error');
+                    showMessage('❌ No se pudo acceder a la cámara', 'error');
                     scannerModal.classList.remove('active');
                 }
             }
@@ -909,9 +894,9 @@
                             reproducirBeep();
                             detenerCamara();
                             scannerModal.classList.remove('active');
-                            showMessage('✅ Código: ' + barcode, 'success');
+                            showMessage('✅ Código escaneado: ' + barcode, 'success');
                         }
-                    }).catch(err => console.log('Error detección:', err));
+                    }).catch(err => console.log('Error:', err));
                 }
             }
 
@@ -938,7 +923,7 @@
                 }
             });
 
-            // Fotografía
+            // Foto
             document.getElementById('takePhotoBtn').addEventListener('click', () => photoInput.click());
             photoInput.addEventListener('change', function(event) {
                 if (event.target.files && event.target.files[0]) {
@@ -958,7 +943,7 @@
                 photoPreview.src = '#';
             });
 
-            // Envío del formulario
+            // Envío
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
 
@@ -983,15 +968,12 @@
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Guardando...';
 
                 try {
-                    // Verificar si ya existe SKU + Unidad de venta
                     const existing = await findArticuloBySkuAndUnidad(sku, unidadVenta);
                     let idUnico;
 
                     if (existing.exists) {
-                        // Usar ID existente
                         idUnico = existing.id;
                     } else {
-                        // Generar nuevo ID
                         idUnico = await getNextId(almacen);
                     }
 
@@ -1008,16 +990,15 @@
                         fuente: 'registro-articulos'
                     };
 
-                    // Guardar en Firestore usando el ID generado
                     await db.collection('articulos').doc(idUnico).set(articuloData);
 
-                    // Mostrar modal con resultado
                     resultSku.textContent = sku;
                     resultDescripcion.textContent = descripcion;
                     resultId.textContent = idUnico;
                     resultModal.classList.add('active');
 
                     resetForm();
+                    showMessage('✅ Artículo guardado correctamente', 'success');
                     
                 } catch (error) {
                     console.error('Error:', error);
