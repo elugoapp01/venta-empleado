@@ -911,15 +911,31 @@
     
     function obtenerEstadoFolioActual() {
         if (carrito.length === 0) {
-            return { primerFolio: "", cantidadMismoFolio: 0 };
+            return { 
+                folioActual: "", 
+                cantidadEnFolioActual: 0,
+                foliosExistentes: []
+            };
         }
-        const primerArticulo = carrito[0];
-        const folioActual = primerArticulo.folio;
-        let cantidad = 0;
+        
+        // Obtener todos los folios únicos en el carrito
+        const foliosExistentes = [...new Set(carrito.map(item => item.folio))];
+        
+        // El último folio usado es el del último artículo agregado
+        const ultimoArticulo = carrito[carrito.length - 1];
+        const folioActual = ultimoArticulo.folio;
+        
+        // Contar cuántos artículos tienen el folio actual
+        let cantidadEnFolioActual = 0;
         for (let item of carrito) {
-            if (item.folio === folioActual) cantidad++;
+            if (item.folio === folioActual) cantidadEnFolioActual++;
         }
-        return { primerFolio: folioActual, cantidadMismoFolio: cantidad };
+        
+        return { 
+            folioActual: folioActual, 
+            cantidadEnFolioActual: cantidadEnFolioActual,
+            foliosExistentes: foliosExistentes
+        };
     }
     
     // ==================== FUNCIONES FIREBASE ====================
@@ -1185,16 +1201,20 @@
         </div>`;
         document.getElementById("modalCantidad").value = "";
         
-        const estadoActual = obtenerEstadoFolioActual();
-        let folioMostrar = "";
-        if (estadoActual.cantidadMismoFolio === 0) {
-            folioMostrar = "";
-        } else if (estadoActual.cantidadMismoFolio < 6) {
-            folioMostrar = estadoActual.primerFolio;
+        // Obtener estado actual del carrito para mostrar el folio correcto
+        if (carrito.length > 0) {
+            const estadoFolio = obtenerEstadoFolioActual();
+            // Si el folio actual tiene menos de 6, mostrarlo automáticamente
+            if (estadoFolio.cantidadEnFolioActual < 6) {
+                document.getElementById("modalFolio").value = estadoFolio.folioActual;
+            } else {
+                // Si ya tiene 6, dejar vacío para que el usuario ingrese uno nuevo
+                document.getElementById("modalFolio").value = "";
+            }
         } else {
-            folioMostrar = "";
+            document.getElementById("modalFolio").value = "";
         }
-        document.getElementById("modalFolio").value = folioMostrar;
+        
         document.getElementById("modalError").innerHTML = "";
         document.getElementById("modalAgregar").classList.add("active");
         document.getElementById("resultadosFlotante").style.display = "none";
@@ -1226,40 +1246,73 @@
             return; 
         }
         
-        const estadoActual = obtenerEstadoFolioActual();
+        // Obtener estado actual del carrito
+        const estadoFolio = obtenerEstadoFolioActual();
         let folioAAgregar = "";
         
-        if (estadoActual.cantidadMismoFolio === 0) {
+        if (carrito.length === 0) {
+            // PRIMER ARTÍCULO - requiere folio obligatorio
             if (!folioIngresado) {
-                document.getElementById("modalError").innerHTML = "INGRESE EL FOLIO (PRIMER ARTÍCULO)";
+                document.getElementById("modalError").innerHTML = "⚠️ INGRESE EL FOLIO (PRIMER ARTÍCULO)";
                 document.getElementById("modalFolio").focus();
                 return;
             }
             folioAAgregar = folioIngresado;
-        } else if (estadoActual.cantidadMismoFolio < 6) {
-            folioAAgregar = estadoActual.primerFolio;
-            document.getElementById("modalFolio").value = folioAAgregar;
         } else {
-            if (!folioIngresado) {
-                document.getElementById("modalError").innerHTML = "INGRESE UN NUEVO FOLIO (YA HAY 6 ARTÍCULOS)";
-                document.getElementById("modalFolio").focus();
-                return;
+            // Verificar si el folio actual ya tiene 6 artículos
+            if (estadoFolio.cantidadEnFolioActual < 6) {
+                // El folio actual aún tiene espacio - usarlo automáticamente
+                folioAAgregar = estadoFolio.folioActual;
+                document.getElementById("modalFolio").value = folioAAgregar;
+            } else {
+                // El folio actual ya tiene 6 - necesitamos uno nuevo
+                if (!folioIngresado) {
+                    document.getElementById("modalError").innerHTML = `⚠️ EL FOLIO ${estadoFolio.folioActual} YA TIENE 6 ARTÍCULOS. INGRESE UN NUEVO FOLIO`;
+                    document.getElementById("modalFolio").focus();
+                    return;
+                }
+                
+                // Verificar si el folio ingresado ya existe en el carrito
+                if (estadoFolio.foliosExistentes.includes(folioIngresado)) {
+                    // Si el folio ya existe, verificar que no tenga 6 artículos
+                    const articulosEseFolio = carrito.filter(item => item.folio === folioIngresado);
+                    if (articulosEseFolio.length >= 6) {
+                        document.getElementById("modalError").innerHTML = `⚠️ EL FOLIO ${folioIngresado} YA TIENE 6 ARTÍCULOS, USE OTRO DIFERENTE`;
+                        document.getElementById("modalFolio").focus();
+                        return;
+                    }
+                    folioAAgregar = folioIngresado;
+                } else {
+                    // Nuevo folio
+                    folioAAgregar = folioIngresado;
+                }
             }
-            folioAAgregar = folioIngresado;
         }
         
+        // Validar stock
         if (cantidad > articuloModalActual.stockDisponible) {
-            document.getElementById("modalError").innerHTML = `STOCK INSUFICIENTE. DISPONIBLE: ${articuloModalActual.stockDisponible}`;
+            document.getElementById("modalError").innerHTML = `⚠️ STOCK INSUFICIENTE. DISPONIBLE: ${articuloModalActual.stockDisponible}`;
             return;
         }
         
+        // Validar que no exceda el límite de 6 por folio (sumando cantidades)
+        const articulosMismoFolio = carrito.filter(item => item.folio === folioAAgregar);
+        const totalEnFolio = articulosMismoFolio.reduce((sum, item) => sum + item.cantidad, 0);
+        if (totalEnFolio + cantidad > 6) {
+            document.getElementById("modalError").innerHTML = `⚠️ LÍMITE DE 6 ARTÍCULOS POR FOLIO. ESPACIO DISPONIBLE: ${6 - totalEnFolio}`;
+            return;
+        }
+        
+        // Buscar si ya existe el mismo producto en el mismo folio
         const itemExistente = carrito.find(i => i.id === articuloModalActual.id && i.folio === folioAAgregar);
         const nuevaCantidadItem = itemExistente ? itemExistente.cantidad + cantidad : cantidad;
+        
         if (nuevaCantidadItem > articuloModalActual.stockDisponible) {
-            document.getElementById("modalError").innerHTML = `STOCK INSUFICIENTE. DISPONIBLE: ${articuloModalActual.stockDisponible}`;
+            document.getElementById("modalError").innerHTML = `⚠️ STOCK INSUFICIENTE. DISPONIBLE: ${articuloModalActual.stockDisponible}`;
             return;
         }
         
+        // Agregar o actualizar item en el carrito
         if (itemExistente) {
             itemExistente.cantidad += cantidad;
             itemExistente.subtotal = itemExistente.cantidad * itemExistente.precio;
