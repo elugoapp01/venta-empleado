@@ -124,20 +124,53 @@ let html5QrCode = null;
 let procesando = false;
 
 /* =========================================================
-   OVERLAY (mensajes grandes con color)
+   OVERLAY
+   - opciones:
+     { voz: "texto a decir", reiniciar: true/false }
    ========================================================= */
 
-function mostrar(color, mensaje, reiniciar = true){
+function mostrarOverlay(color, mensajeHTML, opciones = {}){
   const overlay = document.getElementById("overlay");
   overlay.style.background = color;
-  overlay.innerHTML = mensaje;
+  overlay.innerHTML = mensajeHTML;
   overlay.style.display = "flex";
 
-  if (reiniciar) {
-    setTimeout(() => {
-      overlay.style.display = "none";
-      iniciarEscaner();
-    }, 4000);
+  const voz = opciones.voz || "";
+  const reiniciar = opciones.reiniciar !== false;
+
+  const cerrarYReiniciar = () => {
+    overlay.style.display = "none";
+    if (reiniciar) iniciarEscaner();
+  };
+
+  if (voz) {
+    try {
+      speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(voz);
+
+      // Cuando termine la voz → cerrar overlay
+      utter.onend = () => {
+        cerrarYReiniciar();
+      };
+
+      // Por si falla la voz o no termina nunca → fallback de 6 seg
+      const fallback = setTimeout(() => {
+        cerrarYReiniciar();
+      }, 6000);
+
+      utter.onend = () => {
+        clearTimeout(fallback);
+        cerrarYReiniciar();
+      };
+
+      speechSynthesis.speak(utter);
+    } catch (e) {
+      // Si no hay voz disponible → tiempo fijo
+      setTimeout(cerrarYReiniciar, 2000);
+    }
+  } else {
+    // Sin voz → tiempo fijo (errores rápidos)
+    setTimeout(cerrarYReiniciar, opciones.duracion || 2000);
   }
 }
 
@@ -167,63 +200,69 @@ async function iniciarEscaner(){
     );
   } catch (e) {
     console.error("Error al iniciar escáner:", e);
-    mostrar("#b71c1c", "ERROR DE CÁMARA ❌<br>Revisa permisos", false);
+    mostrarOverlay("#b71c1c", "ERROR DE CÁMARA ❌<br>Revisa permisos", {
+      voz: "",
+      reiniciar: false,
+      duracion: 4000
+    });
   }
 }
 
 /* =========================================================
-   PROCESAR CÓDIGO ESCANEADO
+   PROCESAR ESCANEO
    ========================================================= */
 
 async function procesarEscaneo(textoQR){
   const id = (textoQR || "").trim();
 
   if (!id) {
-    mostrar("#b71c1c", "QR INVÁLIDO ❌");
+    mostrarOverlay("#b71c1c", "QR INVÁLIDO ❌", { voz: "" });
     return;
   }
 
   try {
-    // Consultar el turno por id
     const snap = await get(ref(db, `${ROOT}/turnos/${id}`));
 
     if (!snap.exists()) {
-      mostrar("#b71c1c", "TURNO NO VÁLIDO ❌");
+      mostrarOverlay("#b71c1c", "TURNO NO VÁLIDO ❌", { voz: "" });
       return;
     }
 
     const turno = snap.val();
 
     if (turno.estado === "confirmado") {
-      mostrar("#b71c1c", "YA UTILIZADO ❌");
+      mostrarOverlay("#b71c1c", "YA UTILIZADO ❌", { voz: "" });
+      return;
+    }
+
+    if (turno.estado === "concluido") {
+      mostrarOverlay("#b71c1c", "TURNO YA CONCLUIDO ❌", { voz: "" });
       return;
     }
 
     if (turno.estado === "cancelado") {
-      mostrar("#b71c1c", "TURNO CANCELADO ❌");
+      mostrarOverlay("#b71c1c", "TURNO CANCELADO ❌", { voz: "" });
       return;
     }
 
-    // Marcar como confirmado
+    // Confirmar
     await update(ref(db, `${ROOT}/turnos/${id}`), {
       estado: "confirmado",
       fechaConfirmado: new Date().toLocaleString(),
       fechaConfirmadoMs: Date.now()
     });
 
-    // Voz
-    try {
-      speechSynthesis.cancel();
-      speechSynthesis.speak(new SpeechSynthesisUtterance("Turno " + turno.numero + " acceso permitido"));
-    } catch(e){}
-
-    mostrar("#1b5e20", "ACCESO PERMITIDO ✅<br>Turno " + turno.numero);
+    mostrarOverlay(
+      "#1b5e20",
+      "ACCESO PERMITIDO ✅<br>Turno " + turno.numero,
+      { voz: "Turno " + turno.numero + " acceso permitido" }
+    );
 
   } catch (e) {
     console.error("Error procesando escaneo:", e);
-    mostrar("#b71c1c", "ERROR AL PROCESAR ❌");
+    mostrarOverlay("#b71c1c", "ERROR AL PROCESAR ❌", { voz: "" });
   } finally {
-    setTimeout(() => { procesando = false; }, 1000);
+    setTimeout(() => { procesando = false; }, 800);
   }
 }
 
