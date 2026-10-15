@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Sistema Integral · Panel de Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0B2F5C 0%, #1a4a7a 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header compacto */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            width: 55px;
+            height: 55px;
+            background: white;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px auto;
+            box-shadow: 0 5px 12px rgba(0,0,0,0.15);
+        }
+
+        .logo img {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.75rem;
+            margin-top: 4px;
+        }
+
+        /* Grid responsive */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 25px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Tarjeta */
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 18px 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+            transition: left 0.4s ease;
+        }
+
+        .card:hover::before {
+            left: 100%;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.25);
+        }
+
+        /* Colores de tarjetas */
+        .card-cobrar { background: linear-gradient(135deg, #1F6C4A, #2a8e5c); color: white; }
+        .card-validar { background: linear-gradient(135deg, #0B2F5C, #1a4a7a); color: white; }
+        .card-monitor { background: linear-gradient(135deg, #e67e22, #d35400); color: white; }
+
+        .card-icon {
+            font-size: 1.8rem;
+            margin-bottom: 4px;
+        }
+
+        .card h2 {
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            letter-spacing: -0.3px;
+        }
+
+        .card p {
+            font-size: 0.6rem;
+            opacity: 0.85;
+            line-height: 1.3;
+            margin-bottom: 8px;
+        }
+
+        .card-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 30px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.65rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            width: fit-content;
+        }
+
+        .card-btn:hover {
+            background: rgba(255,255,255,0.35);
+            transform: scale(1.02);
+        }
+
+        /* Footer compacto */
+        .footer {
+            text-align: center;
+            padding: 12px;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.65rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 10px;
+        }
+
+        .footer img {
+            width: 25px;
+            margin-bottom: 4px;
+            opacity: 0.5;
+        }
+
+        /* Animación de entrada */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            animation: fadeInUp 0.4s ease backwards;
+        }
+
+        .card:nth-child(1) { animation-delay: 0.03s; }
+        .card:nth-child(2) { animation-delay: 0.06s; }
+        .card:nth-child(3) { animation-delay: 0.09s; }
+
+        /* Responsive */
+        @media (max-width: 550px) {
+            .cards-grid {
+                grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+                gap: 12px;
+            }
+            .card {
+                padding: 14px 8px;
+            }
+            .card-icon {
+                font-size: 1.5rem;
+            }
+            .card h2 {
+                font-size: 0.75rem;
+            }
+            .card p {
+                font-size: 0.55rem;
+            }
+            .header h1 {
+                font-size: 1.2rem;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .cards-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <!-- HEADER -->
+    <div class="header">
+        <div class="logo">
+            <img src="logo.png" onerror="this.src='https://via.placeholder.com/40?text=LOGO'">
+        </div>
+        <h1>Sistema Integral de Ventas</h1>
+        <p>Selecciona un módulo</p>
+    </div>
+
+    <!-- TARJETAS -->
+    <div class="cards-grid">
+        <!-- CAJERO -->
+        <div class="card card-cobrar" onclick="abrirModulo('cajero', 'CAJERO')">
+            <div class="card-icon"><i class="fas fa-calculator"></i></div>
+            <h2>CAJERO</h2>
+            <p>Cobrar · Corte caja · Inventario</p>
+            <button class="card-btn"><i class="fas fa-arrow-right"></i> ACCEDER</button>
+        </div>
+
+        <!-- PUNTO DE VENTA -->
+        <div class="card card-validar" onclick="abrirModulo('punto_venta', 'PUNTO DE VENTA')">
+            <div class="card-icon"><i class="fas fa-shopping-cart"></i></div>
+            <h2>PUNTO DE VENTA</h2>
+            <p>Validar productos · Carrito</p>
+            <button class="card-btn"><i class="fas fa-arrow-right"></i> ACCEDER</button>
+        </div>
+
+        <!-- MONITOR DE TURNOS -->
+        <div class="card card-monitor" onclick="abrirExterno('https://elugoapp01.github.io/venta-empleado/Turnos/monitor.html', 'MONITOR')">
+            <div class="card-icon"><i class="fas fa-tv"></i></div>
+            <h2>MONITOR DE TURNOS</h2>
+            <p>Monitor en tiempo real</p>
+            <button class="card-btn"><i class="fas fa-external-link-alt"></i> ABRIR</button>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <img src="logo.png" onerror="this.style.display='none'">
+        <p>© 2026 · Sistema de Ventas y Turnos</p>
+    </div>
+</div>
+
+<script>
+    function abrirModulo(archivo, nombre) {
+        window.location.href = `${archivo}.html`;
+    }
+
+    function abrirExterno(url, nombre) {
+        window.open(url, '_blank');
+    }
+</script>
+
+</body>
+</html>
