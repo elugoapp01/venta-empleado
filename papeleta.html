@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Papeleta - Mesa de Control</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        background: #E5E5E5;
+        color: #000;
+        padding: 20px 0;
+    }
+
+    /* ===== HOJA CARTA ===== */
+    .hoja {
+        width: 8.5in;
+        height: 11in;
+        background: white;
+        margin: 0 auto 20px;
+        padding: 0;
+        box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* ===== MEDIA CARTA ===== */
+    .papeleta {
+        width: 100%;
+        height: 5.5in;
+        padding: 0.35in 0.4in 0.35in 0.4in;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* ===== LÍNEA DE CORTE ===== */
+    .linea-corte {
+        position: relative;
+        height: 0;
+        border-top: 1px dashed #999;
+        margin: 0 0.15in;
+    }
+    .linea-corte::before {
+        content: "✂";
+        position: absolute;
+        left: -2px;
+        top: -10px;
+        color: #999;
+        font-size: 12px;
+        background: white;
+        padding-right: 4px;
+        line-height: 1;
+    }
+
+    /* ================= ENCABEZADO INSTITUCIONAL ================= */
+    .cabecera {
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        margin-bottom: 12px;
+    }
+
+    .cabecera-tablas {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .cabecera-logo {
+        width: 25%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px;
+        border: none;
+        background: white;
+    }
+
+    /* ---- TABLA 1 ---- */
+    .tabla-1 {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9px;
+        table-layout: fixed;
+    }
+    .tabla-1 td {
+        border: 0.5px solid #666;
+        padding: 2px 4px;
+        vertical-align: middle;
+        line-height: 1.15;
+        text-align: center;
+    }
+    .tabla-1 .etiqueta {
+        background: #D9D9D9;
+        font-weight: bold;
+        font-size: 8.5px;
+        color: #222;
+    }
+    .tabla-1 .valor {
+        font-weight: normal;
+        font-size: 10.5px;
+        color: #000;
+        white-space: nowrap;
+    }
+    .tabla-1 .fila-valor td {
+        padding-top: 7px;
+        padding-bottom: 7px;
+    }
+    .tabla-1 .c1 { width: 46%; }
+    .tabla-1 .c2 { width: 30%; }
+    .tabla-1 .c3 { width: 24%; }
+    /* Eliminar doble borde entre fila 2 y 3 */
+    .tabla-1 .fila-valor td {
+        border-bottom: 0.5px solid #666;
+    }
+
+    /* ---- TABLA 2 ---- */
+    .tabla-2 {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9px;
+        table-layout: fixed;
+        margin-top: 0;
+    }
+    /* La primera fila de la tabla 2 usa el mismo borde que el resto */
+    .tabla-2 tr:first-child td {
+        border-top: 0.5px solid #666;
+    }
+    /* Quita el borde superior de la primera fila para evitar la línea doble */
+    .tabla-2 tr:first-child td {
+        border-top: none;
+    }
+    .tabla-2 td {
+        border: 0.5px solid #666;
+        padding: 2px 4px;
+        vertical-align: middle;
+        line-height: 1.15;
+        text-align: center;
+    }
+    .tabla-2 .etiqueta {
+        background: #D9D9D9;
+        font-weight: bold;
+        font-size: 8.5px;
+        color: #222;
+    }
+    .tabla-2 .valor {
+        font-weight: normal;
+        font-size: 10.5px;
+        color: #000;
+    }
+    .tabla-2 .fila-valor td {
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+    .tabla-2 .c1 { width: 17%; }
+    .tabla-2 .c2 { width: 20%; }
+    .tabla-2 .c3 { width: 16%; }
+    .tabla-2 .c4 { width: 11%; }
+    .tabla-2 .c5 { width: 36%; }
+
+    /* ===== FOLIO ===== */
+    .tabla-2 .valor-folio {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        padding: 0 4px;
+        height: 100%;
+    }
+
+    .tabla-2 .num-numero {
+        color: #D40000;
+        font-weight: normal;
+        font-size: 22px;
+        line-height: 1;
+        letter-spacing: -1px;
+        font-family: 'Arial Narrow', 'Arial', sans-serif;
+    }
+
+    .tabla-2 .num-folio {
+        color: #D40000;
+        font-weight: 900;
+        font-size: 22px;
+        font-family: 'Courier New', 'Consolas', monospace;
+        letter-spacing: 2px;
+        line-height: 1;
+    }
+
+    /* ---- Logo Alsea ---- */
+    .logo-alsea {
+        max-width: 90%;
+        max-height: 90%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        display: block;
+    }
+
+    /* ================= DATOS DEL TURNO ================= */
+    .datos-turno {
+        display: grid;
+        grid-template-columns: 1.7fr 1fr 1fr;
+        gap: 6px 20px;
+        font-size: 11px;
+        margin-bottom: 22px;
+        padding-top: 6px;
+    }
+    .dato-item {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        font-size: 11px;
+        color: #000;
+    }
+    .dato-item .etiqueta {
+        font-size: 11px;
+        font-weight: bold;
+        color: #000;
+        white-space: nowrap;
+    }
+    .dato-item .linea-llenado {
+        flex: 1;
+        border-bottom: 1px solid #000;
+        min-height: 14px;
+        padding-bottom: 1px;
+        padding-left: 4px;
+    }
+
+    /* ================= TABLA PRODUCTOS ================= */
+    .tabla-productos {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10px;
+        margin-bottom: 30px;
+    }
+
+    .tabla-productos th {
+        background: #D9D9D9;
+        color: #000;
+        font-weight: bold;
+        font-size: 9px;
+        text-align: center;
+        padding: 4px 3px;
+        border: 0.5px solid #666;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        line-height: 1.1;
+    }
+
+    .tabla-productos td {
+        border: 0.5px solid #666;
+        padding: 2px 4px;
+        font-size: 10px;
+        height: 26px;
+        vertical-align: middle;
+        line-height: 1.1;
+    }
+
+    .tabla-productos td.codigo { text-align: left; font-family: 'Courier New', monospace; font-weight: bold; padding-left: 6px; }
+    .tabla-productos td.descripcion { text-align: left; padding-left: 6px; }
+    .tabla-productos td.centro { text-align: center; }
+    .tabla-productos td.numero { text-align: right; font-family: 'Courier New', monospace; padding-right: 6px; }
+
+    .col-codigo     { width: 14%; }
+    .col-descripcion{ width: 38%; }
+    .col-cajas      { width: 10%; }
+    .col-precio     { width: 13%; }
+    .col-subtotal   { width: 12%; }
+    .col-total      { width: 13%; }
+
+    /* ================= PIE: MESA DE CONTROL + TOTAL DE COMPRA ================= */
+    .pie-papeleta {
+        display: grid;
+        grid-template-columns: 52% 38%;
+        justify-content: space-between;
+        padding-top: 6px;
+        margin-bottom: 12px;
+    }
+    .pie-mesa {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+    }
+    .pie-mesa .firma-linea {
+        width: 100%;
+        border-bottom: 1px solid #000;
+        min-height: 14px;
+    }
+    .pie-mesa .firma-texto {
+        font-size: 11px;
+        font-weight: bold;
+        color: #000;
+    }
+    .pie-mesa .id-venta {
+        width: 100%;
+        min-height: 14px;
+        font-size: 11px;
+        font-weight: bold;
+        color: #000;
+        text-align: left;
+        padding-left: 4px;
+        padding-bottom: 1px;
+    }
+
+    .pie-total {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+    }
+    .pie-total .firma-texto {
+        font-size: 11px;
+        font-weight: bold;
+        color: #000;
+        white-space: nowrap;
+    }
+    .pie-total .firma-linea {
+        flex: 1;
+        border-bottom: 1px solid #000;
+        min-height: 14px;
+        padding-left: 6px;
+        font-size: 11px;
+        font-weight: bold;
+        text-align: center;
+        padding-right: 6px;
+    }
+
+    /* ================= LEYENDA FINAL ================= */
+    .leyenda-final {
+        font-size: 13px;
+        color: #000;
+        text-align: justify;
+        line-height: 1.3;
+        margin-bottom: 8px;
+    }
+    .mesa-control-rojo {
+        display: block;
+        text-align: right;
+        color: #D40000;
+        font-weight: bold;
+        font-size: 13px;
+        margin-top: 8px;
+        letter-spacing: 0.5px;
+    }
+
+    /* ================= IMPRESIÓN ================= */
+    @page {
+        size: letter portrait;
+        margin: 0;
+    }
+
+    @media print {
+        body { background: white; padding: 0; margin: 0; }
+        .hoja {
+            box-shadow: none;
+            margin: 0;
+            page-break-after: always;
+        }
+        .hoja:last-child { page-break-after: auto; }
+        .botones-print { display: none !important; }
+        .tabla-1 .etiqueta,
+        .tabla-2 .etiqueta,
+        .tabla-productos th {
+            background: #D9D9D9 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+    }
+
+    /* ================= BOTONES ================= */
+    .botones-print {
+        position: fixed;
+        top: 15px;
+        right: 15px;
+        z-index: 100;
+        display: flex;
+        gap: 10px;
+    }
+    .botones-print button {
+        background: #0B2F5C;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 30px;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        font-family: inherit;
+    }
+    .botones-print button:hover { background: #16486C; }
+    .botones-print button.danger { background: #C44536; }
+    .botones-print button.danger:hover { background: #a5372b; }
+</style>
+</head>
+<body>
+
+<div class="botones-print">
+    <button onclick="window.print()">🖨️ IMPRIMIR</button>
+    <button class="danger" onclick="window.close()">✕ CERRAR</button>
+</div>
+
+<div class="hoja">
+
+    <!-- =====================================================
+         PAPELETA SUPERIOR
+         ===================================================== -->
+    <div class="papeleta">
+
+        <div class="cabecera">
+            <div class="cabecera-tablas">
+                <table class="tabla-1">
+                    <tr>
+                        <td class="etiqueta c1">Nombre del documento</td>
+                        <td class="etiqueta c2">Código del Documento</td>
+                        <td class="etiqueta c3">Emisión</td>
+                    </tr>
+                    <tr class="fila-valor">
+                        <td class="valor c1">Formato Recibo Venta Empleados</td>
+                        <td class="valor c2">FOR-FIN-MEX-52735</td>
+                        <td class="valor c3">22-oct-2024</td>
+                    </tr>
+                </table>
+
+                <table class="tabla-2">
+                    <tr>
+                        <td class="etiqueta c1">Proceso</td>
+                        <td class="etiqueta c2">Área</td>
+                        <td class="etiqueta c3">Línea</td>
+                        <td class="etiqueta c4">Versión</td>
+                        <td class="etiqueta c5">Folio</td>
+                    </tr>
+                    <tr class="fila-valor">
+                        <td class="valor c1">Venta Empleado</td>
+                        <td class="valor c2">Mesa de Control</td>
+                        <td class="valor c3">General</td>
+                        <td class="valor c4">01</td>
+                        <td class="valor c5">
+                            <span class="valor-folio">
+                                <span class="num-numero">Nº</span>
+                                <span class="num-folio">41001</span>
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="cabecera-logo">
+                <img src="logoalsea.png" alt="Alsea" class="logo-alsea" onerror="this.style.display='none'">
+            </div>
+        </div>
+
+        <div class="datos-turno">
+            <div class="dato-item">
+                <span class="etiqueta">Nombre:</span>
+                <span class="linea-llenado">JUAN PÉREZ GARCÍA</span>
+            </div>
+            <div class="dato-item">
+                <span class="etiqueta">Nº de Empleado:</span>
+                <span class="linea-llenado">12345</span>
+            </div>
+            <div class="dato-item">
+                <span class="etiqueta">Fecha:</span>
+                <span class="linea-llenado">08-oct-2026</span>
+            </div>
+        </div>
+
+        <table class="tabla-productos">
+            <thead>
+                <tr>
+                    <th class="col-codigo">CÓDIGO</th>
+                    <th class="col-descripcion">DESCRIPCIÓN</th>
+                    <th class="col-cajas">Nº DE CAJAS</th>
+                    <th class="col-precio">PRECIO UNITARIO</th>
+                    <th class="col-subtotal">SUBTOTAL</th>
+                    <th class="col-total">TOTAL</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="codigo">IN01</td>
+                    <td class="descripcion">PANTALÓN CASUAL NEGRO TALLA 32</td>
+                    <td class="centro">2</td>
+                    <td class="numero">$350.00</td>
+                    <td class="numero"></td>
+                    <td class="numero">$700.00</td>
+                </tr>
+                <tr>
+                    <td class="codigo">IN02</td>
+                    <td class="descripcion">CAMISA FORMAL BLANCA TALLA M</td>
+                    <td class="centro">1</td>
+                    <td class="numero">$280.00</td>
+                    <td class="numero"></td>
+                    <td class="numero">$280.00</td>
+                </tr>
+                <tr>
+                    <td class="codigo">LI03</td>
+                    <td class="descripcion">ZAPATOS CASUALES CAFÉ TALLA 28</td>
+                    <td class="centro">1</td>
+                    <td class="numero">$650.00</td>
+                    <td class="numero"></td>
+                    <td class="numero">$650.00</td>
+                </tr>
+                <tr>
+                    <td class="codigo">IN04</td>
+                    <td class="descripcion">SUDADERA GRIS TALLA L</td>
+                    <td class="centro">3</td>
+                    <td class="numero">$420.00</td>
+                    <td class="numero"></td>
+                    <td class="numero">$1,260.00</td>
+                </tr>
+                <tr>
+                    <td class="codigo"></td><td class="descripcion"></td>
+                    <td class="centro"></td><td class="numero"></td>
+                    <td class="numero"></td><td class="numero"></td>
+                </tr>
+                <tr>
+                    <td class="codigo"></td><td class="descripcion"></td>
+                    <td class="centro"></td><td class="numero"></td>
+                    <td class="numero"></td><td class="numero"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- PIE -->
+        <div class="pie-papeleta">
+            <div class="pie-mesa">
+                <div class="id-venta">V001</div>
+                <div class="firma-linea"></div>
+                <div class="firma-texto">Mesa de Control</div>
+            </div>
+            <div class="pie-total">
+                <span class="firma-texto">Total de Compra:</span>
+                <span class="firma-linea">$2,890.00</span>
+            </div>
+        </div>
+
+        <div class="leyenda-final">
+            La entrega de productos sólo serán el día y hora estimados por la venta posterior a la fecha establecido en el caso de pérdida.
+            <span class="mesa-control-rojo">MESA DE CONTROL</span>
+        </div>
+    </div>
+
+    <!-- ================= LÍNEA DE CORTE ================= -->
+    <div class="linea-corte"></div>
+
+    <!-- =====================================================
+         PAPELETA INFERIOR
+         ===================================================== -->
+    <div class="papeleta">
+
+        <div class="cabecera">
+            <div class="cabecera-tablas">
+                <table class="tabla-1">
+                    <tr>
+                        <td class="etiqueta c1">Nombre del documento</td>
+                        <td class="etiqueta c2">Código del Documento</td>
+                        <td class="etiqueta c3">Emisión</td>
+                    </tr>
+                    <tr class="fila-valor">
+                        <td class="valor c1">Formato Recibo Venta Empleados</td>
+                        <td class="valor c2">FOR-FIN-MEX-52735</td>
+                        <td class="valor c3">22-oct-2024</td>
+                    </tr>
+                </table>
+
+                <table class="tabla-2">
+                    <tr>
+                        <td class="etiqueta c1">Proceso</td>
+                        <td class="etiqueta c2">Área</td>
+                        <td class="etiqueta c3">Línea</td>
+                        <td class="etiqueta c4">Versión</td>
+                        <td class="etiqueta c5">Folio</td>
+                    </tr>
+                    <tr class="fila-valor">
+                        <td class="valor c1">Venta Empleado</td>
+                        <td class="valor c2">Mesa de Control</td>
+                        <td class="valor c3">General</td>
+                        <td class="valor c4">01</td>
+                        <td class="valor c5">
+                            <span class="valor-folio">
+                                <span class="num-numero">Nº</span>
+                                <span class="num-folio">41001</span>
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="cabecera-logo">
+                <img src="logoalsea.png" alt="Alsea" class="logo-alsea" onerror="this.style.display='none'">
+            </div>
+        </div>
+
+        <div class="datos-turno">
+            <div class="dato-item">
+                <span class="etiqueta">Nombre:</span>
+                <span class="linea-llenado">JUAN PÉREZ GARCÍA</span>
+            </div>
+            <div class="dato-item">
+                <span class="etiqueta">Nº de Empleado:</span>
+                <span class="linea-llenado">12345</span>
+            </div>
+            <div class="dato-item">
+                <span class="etiqueta">Fecha:</span>
+                <span class="linea-llenado">08-oct-2026</span>
+            </div>
+        </div>
+
+        <table class="tabla-productos">
+            <thead>
+                <tr>
+                    <th class="col-codigo">CÓDIGO</th>
+                    <th class="col-descripcion">DESCRIPCIÓN</th>
+                    <th class="col-cajas">Nº DE CAJAS</th>
+                    <th class="col-precio">PRECIO UNITARIO</th>
+                    <th class="col-subtotal">SUBTOTAL</th>
+                    <th class="col-total">TOTAL</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="codigo">IN01</td>
+                    <td class="descripcion">PANTALÓN CASUAL NEGRO TALLA 32</td>
+                    <td class="centro">2</td>
+                    <td class="numero">$350.00</td>
+                    <td class="numero"></td>
+                    <td class="numero">$700.00</td>
+                </tr>
+                <tr>
+                    <td class="codigo">IN02</td>
+                    <td class="descripcion">CAMISA FORMAL BLANCA TALLA M</td>
+                    <td class="centro">1</td>
+                    <td class="numero">$280.00</td>
+                    <td class="numero"></td>
+                    <td class="numero">$280.00</td>
+                </tr>
+                <tr>
+                    <td class="codigo">LI03</td>
+                    <td class="descripcion">ZAPATOS CASUALES CAFÉ TALLA 28</td>
+                    <td class="centro">1</td>
+                    <td class="numero">$650.00</td>
+                    <td class="numero"></td>
+                    <td class="numero">$650.00</td>
+                </tr>
+                <tr>
+                    <td class="codigo">IN04</td>
+                    <td class="descripcion">SUDADERA GRIS TALLA L</td>
+                    <td class="centro">3</td>
+                    <td class="numero">$420.00</td>
+                    <td class="numero"></td>
+                    <td class="numero">$1,260.00</td>
+                </tr>
+                <tr>
+                    <td class="codigo"></td><td class="descripcion"></td>
+                    <td class="centro"></td><td class="numero"></td>
+                    <td class="numero"></td><td class="numero"></td>
+                </tr>
+                <tr>
+                    <td class="codigo"></td><td class="descripcion"></td>
+                    <td class="centro"></td><td class="numero"></td>
+                    <td class="numero"></td><td class="numero"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="pie-papeleta">
+            <div class="pie-mesa">
+                <div class="id-venta">V001</div>
+                <div class="firma-linea"></div>
+                <div class="firma-texto">Mesa de Control</div>
+            </div>
+            <div class="pie-total">
+                <span class="firma-texto">Total de Compra:</span>
+                <span class="firma-linea">$2,890.00</span>
+            </div>
+        </div>
+
+        <div class="leyenda-final">
+            La entrega de productos sólo serán el día y hora estimados por la venta posterior a la fecha establecido en el caso de pérdida.
+            <span class="mesa-control-rojo">MESA DE CONTROL</span>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

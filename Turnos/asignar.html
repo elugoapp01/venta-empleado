@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Asignar Turno</title>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
+<style>
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body{
+  font-family: Arial, sans-serif;
+  background:white;
+  text-align:center;
+  padding: 12px 12px 25px 12px;
+  -webkit-text-size-adjust: 100%;
+}
+
+.logo{ width: 100px; max-width: 35vw; margin-top: 5px; }
+
+h2 { font-size: 20px; margin: 10px 0 12px 0; }
+
+input{
+  padding: 14px;
+  margin: 4px 0;
+  width: 100%;
+  max-width: 340px;
+  font-size: 16px;
+  border: 2px solid #ccc;
+  border-radius: 10px;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+}
+input:focus{
+  border-color: #0066ff;
+  box-shadow: 0 0 0 3px rgba(0,102,255,0.15);
+}
+input::placeholder{ text-transform: none; color: #999; }
+
+button{
+  padding: 14px 24px;
+  background:#0066ff;
+  color:white;
+  border:none;
+  cursor:pointer;
+  border-radius:10px;
+  font-size: 16px;
+  font-weight: bold;
+  width: 100%;
+  max-width: 340px;
+  margin-top: 8px;
+  transition: 0.2s;
+}
+button:active{ transform: scale(0.98); }
+button:disabled{ background:#999; cursor:not-allowed; }
+
+button.btn-secundario{
+  background: #e8edf3;
+  color: #333;
+  font-weight: 600;
+}
+
+button.btn-naranja{
+  background: #ef6c00;
+  color: white;
+}
+
+#qr{
+  margin: 8px auto 0 auto;
+  max-width: 200px;
+  height: auto;
+  display: block;
+}
+
+.mensaje{
+  margin: 8px auto;
+  padding: 10px 14px;
+  max-width: 360px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 14px;
+}
+.msg-info{ background:#e3f2fd; color:#0d47a1; }
+.msg-error{ background:#ffebee; color:#b71c1c; }
+.msg-ok{ background:#e8f5e9; color:#1b5e20; }
+.msg-pausa{ background:#fff8e1; color:#ef6c00; }
+
+#datosEmpleado{
+  font-size: 15px;
+  line-height: 1.4;
+  margin: 8px 0 0 0;
+  padding: 0 10px;
+}
+
+.lista-registros{
+  margin: 12px auto;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tarjeta{
+  background: #ffffff;
+  border: 2px solid #e0e4eb;
+  border-radius: 12px;
+  padding: 12px 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.tarjeta:hover{
+  border-color: #0066ff;
+  background: #f5f9ff;
+}
+.tarjeta .info{
+  flex: 1;
+  min-width: 0;
+}
+.tarjeta .nombre{
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 2px;
+  word-break: break-word;
+}
+.tarjeta .turno-info{
+  font-size: 12px;
+  color: #666;
+}
+.tarjeta .badge{
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: white;
+  white-space: nowrap;
+}
+.badge-pendiente{ background:#ef6c00; }
+.badge-confirmado{ background:#2e7d32; }
+.badge-concluido{ background:#94a3b8; }
+.badge-cancelado{ background:#6b7280; }
+
+.sin-resultados{
+  color: #999;
+  font-size: 14px;
+  padding: 15px;
+}
+
+.titulo-seccion{
+  font-size: 14px;
+  font-weight: 700;
+  color: #555;
+  margin: 10px 0 6px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tiempo-espera-box{
+  display: inline-block;
+  margin-top: 10px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  transition: background-color 0.4s;
+  min-width: 200px;
+}
+.tiempo-espera-box.azul{ background: #1565c0; }
+.tiempo-espera-box.amarillo{ background: #f9a825; color: #333; }
+.tiempo-espera-box.verde{ background: #2e7d32; }
+.tiempo-espera-box.gris{ background: #757575; }
+.tiempo-espera-box .min{ font-size: 22px; }
+
+.seccion{ margin: 15px auto 5px auto; max-width: 900px; }
+.seccion .titulo{
+  font-size: 16px;
+  font-weight:bold;
+  color:#1565c0;
+  margin-bottom:6px;
+}
+
+.cuadricula{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 6px auto;
+}
+
+.cuadro{
+  width: 70px;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  color: white;
+  font-weight: bold;
+}
+.cuadro .num{ font-size: 20px; line-height: 1.1; }
+.cuadro .sub{
+  font-size: 11px;
+  margin-top: 3px;
+  opacity: 0.95;
+  font-variant-numeric: tabular-nums;
+}
+
+.azul{ background:#1565c0; }
+.naranja{ background:#ef6c00; }
+
+.sin-turnos{ color:#999; font-size:15px; padding:12px; width:100%; }
+
+.footer{ margin-top: 25px; padding: 15px 0; text-align:center; }
+.footer img{ width:60px; display:block; margin:0 auto 3px auto; }
+.footer p{ font-size:11px; color:#555; margin:0; }
+
+@media (max-width: 380px){
+  .cuadro{ width: 60px; height: 72px; }
+  .cuadro .num{ font-size: 18px; }
+  .cuadro .sub{ font-size: 10px; }
+  h2{ font-size: 18px; }
+}
+</style>
+</head>
+
+<body>
+
+<img src="logo.png" class="logo">
+
+<!-- PANTALLA 1: BUSCAR POR NÚMERO -->
+<div id="pantallaBuscar">
+  <h2>Buscar Empleado</h2>
+
+  <input type="text" id="empleado" placeholder="Número de empleado" autocomplete="off"><br>
+
+  <button id="btnBuscar" onclick="buscarPorEmpleado()">🔍 Buscar</button>
+
+  <div id="zonaResultados"></div>
+</div>
+
+<!-- PANTALLA 2: FORMULARIO NUEVO TURNO -->
+<div id="pantallaFormulario" style="display:none;">
+  <h2>Asignar Turno</h2>
+
+  <input type="text" id="empleadoForm" placeholder="Número de empleado" autocomplete="off" readonly><br>
+  <input type="text" id="nombre" placeholder="Nombre(s)" autocomplete="off"><br>
+  <input type="text" id="apPaterno" placeholder="Apellido Paterno" autocomplete="off"><br>
+  <input type="text" id="apMaterno" placeholder="Apellido Materno" autocomplete="off"><br>
+
+  <button id="btnAsignar" onclick="asignarTurno()">Obtener Turno</button>
+  <button class="btn-secundario" onclick="volverABuscar()">Volver</button>
+</div>
+
+<!-- PANTALLA 3: RESULTADO (QR) -->
+<div id="resultado" style="display:none;">
+  <div id="mensaje" class="mensaje" style="display:none;"></div>
+
+  <h3 id="datosEmpleado"></h3>
+  <canvas id="qr"></canvas>
+
+  <div id="zonaTiempoEspera"></div>
+
+  <div id="zonaBotonOtro" style="margin-top:10px; display:none;">
+    <button id="btnOtro" onclick="volverABuscar()">Volver</button>
+  </div>
+
+  <div id="zonaBotonVolver" style="margin-top:10px; display:none;">
+    <button class="btn-secundario" onclick="volverABuscar()">Volver</button>
+  </div>
+</div>
+
+<!-- EN TURNO -->
+<div class="seccion">
+  <div class="titulo">EN TURNO</div>
+  <div id="enTurno" class="cuadricula"></div>
+</div>
+
+<!-- PREPÁRATE -->
+<div class="seccion">
+  <div class="titulo">PREPÁRATE, CASI ES TU TURNO</div>
+  <div id="preparate" class="cuadricula"></div>
+</div>
+
+<div class="footer">
+  <img src="Lugo rojo.png" alt="Logo Lugo">
+  <p>Derechos reservados.</p>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getDatabase, ref, push, set, get, onValue, runTransaction
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA0wUh8AqTOT36ofTMVHdKSRqWZ1MMhHzY",
+  authDomain: "venta-empleado.firebaseapp.com",
+  databaseURL: "https://venta-empleado-default-rtdb.firebaseio.com/",
+  projectId: "venta-empleado",
+  storageBucket: "venta-empleado.firebasestorage.app",
+  messagingSenderId: "655370302032",
+  appId: "1:655370302032:web:bc276acc7683a67b49d755"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const ROOT = "turnosEvento";
+
+/* =========================================================
+   UTILIDADES
+   ========================================================= */
+
+function normalizar(str){
+  return (str || "")
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function mostrarMensaje(tipo, texto){
+  const el = document.getElementById("mensaje");
+  el.className = "mensaje msg-" + tipo;
+  el.textContent = texto;
+  el.style.display = "block";
+}
+function ocultarMensaje(){
+  document.getElementById("mensaje").style.display = "none";
+}
+
+function formatearMMSS(segundos){
+  if (segundos < 0) segundos = 0;
+  const m = Math.floor(segundos / 60).toString().padStart(2,"0");
+  const s = Math.floor(segundos % 60).toString().padStart(2,"0");
+  return m + ":" + s;
+}
+
+function etiquetaEstado(estado){
+  switch (estado) {
+    case "pendiente": return "Pendiente";
+    case "confirmado": return "Confirmado";
+    case "concluido": return "Concluido";
+    case "cancelado": return "Cancelado";
+    default: return estado || "-";
+  }
+}
+
+/* =========================================================
+   ESTADO GLOBAL
+   ========================================================= */
+
+let config = { tamanoBloque: 10, duracionTurnoSeg: 600, pausado: false, horaReanudacion: "" };
+let turnosCache = {};
+
+let bloqueActivo = null;
+let bloqueArranqueMs = null;
+let pausaInicioMs = null;
+let pausaAcumuladaMs = 0;
+let bloqueActivoTerminado = false;
+
+let turnoMostrado = null;
+
+let nodosEnTurno = {};
+let nodosPreparate = {};
+
+/* =========================================================
+   INICIALIZACIÓN
+   ========================================================= */
+
+async function inicializarFirebase(){
+  try {
+    const cfgTamRef = ref(db, `${ROOT}/config/tamanoBloque`);
+    const snapTam = await get(cfgTamRef);
+    if (!snapTam.exists()) await set(cfgTamRef, 10);
+
+    const cfgDurRef = ref(db, `${ROOT}/config/duracionTurnoSeg`);
+    const snapDur = await get(cfgDurRef);
+    if (!snapDur.exists()) await set(cfgDurRef, 600);
+
+    const cfgPauRef = ref(db, `${ROOT}/config/pausado`);
+    const snapPau = await get(cfgPauRef);
+    if (!snapPau.exists()) await set(cfgPauRef, false);
+
+    const cfgHoraRef = ref(db, `${ROOT}/config/horaReanudacion`);
+    const snapHora = await get(cfgHoraRef);
+    if (!snapHora.exists()) await set(cfgHoraRef, "");
+
+    const contRef = ref(db, `${ROOT}/contador/turnoActual`);
+    const snapCont = await get(contRef);
+    if (!snapCont.exists()) await set(contRef, 0);
+
+    console.log("Firebase inicializado.");
+  } catch (e) {
+    console.error("Error inicializando Firebase:", e);
+  }
+}
+
+/* =========================================================
+   CONFIG
+   ========================================================= */
+
+function escucharConfig(){
+  onValue(ref(db, `${ROOT}/config`), snap => {
+    const c = snap.val() || {};
+    config.tamanoBloque = parseInt(c.tamanoBloque) || 10;
+    config.duracionTurnoSeg = parseInt(c.duracionTurnoSeg) || 600;
+    config.horaReanudacion = c.horaReanudacion || "";
+
+    const pausadoAnterior = config.pausado;
+    config.pausado = !!c.pausado;
+
+    if (config.pausado && !pausadoAnterior) {
+      pausaInicioMs = Date.now();
+    } else if (!config.pausado && pausadoAnterior && pausaInicioMs) {
+      pausaAcumuladaMs += Date.now() - pausaInicioMs;
+      pausaInicioMs = null;
+    }
+
+    renderTurnos();
+    actualizarTiempoEsperaMostrado();
+  });
+}
+
+/* =========================================================
+   TURNOS
+   ========================================================= */
+
+function escucharTurnos(){
+  onValue(ref(db, `${ROOT}/turnos`), snap => {
+    turnosCache = {};
+    if (snap.exists()) {
+      snap.forEach(child => {
+        const d = child.val();
+        d.id = child.key;
+        turnosCache[child.key] = d;
+      });
+    }
+    recalcularBloqueActivo();
+    renderTurnos();
+    actualizarTiempoEsperaMostrado();
+  });
+}
+
+function recalcularBloqueActivo(){
+  const confirmados = Object.values(turnosCache).filter(t => t.estado === "confirmado");
+  if (confirmados.length === 0) {
+    bloqueActivo = null;
+    bloqueArranqueMs = null;
+    pausaAcumuladaMs = 0;
+    bloqueActivoTerminado = false;
+    return;
+  }
+
+  confirmados.sort((a,b) => (a.fechaConfirmadoMs || 0) - (b.fechaConfirmadoMs || 0));
+  const masReciente = confirmados[confirmados.length - 1];
+  const bloque = Math.ceil(masReciente.numero / config.tamanoBloque);
+
+  if (bloque !== bloqueActivo) {
+    bloqueActivo = bloque;
+    bloqueArranqueMs = masReciente.fechaConfirmadoMs || Date.now();
+    pausaAcumuladaMs = 0;
+    pausaInicioMs = null;
+    bloqueActivoTerminado = false;
+  }
+}
+
+/* =========================================================
+   CÁLCULOS DE TIEMPO
+   ========================================================= */
+
+function calcularSegundosRestantesTurno(t){
+  if (!t.fechaConfirmadoMs) return config.duracionTurnoSeg;
+  const transcurrido = Date.now() - t.fechaConfirmadoMs;
+  let restante = config.duracionTurnoSeg - Math.floor(transcurrido / 1000);
+  if (restante < 0) restante = 0;
+  return restante;
+}
+
+function calcularTemporizadorBloque(){
+  if (bloqueActivo === null || bloqueArranqueMs === null) {
+    return config.duracionTurnoSeg;
+  }
+  let transcurrido;
+  if (config.pausado && pausaInicioMs) {
+    transcurrido = pausaInicioMs - bloqueArranqueMs - pausaAcumuladaMs;
+  } else {
+    transcurrido = Date.now() - bloqueArranqueMs - pausaAcumuladaMs;
+  }
+  let restante = config.duracionTurnoSeg - Math.floor(transcurrido / 1000);
+  if (restante < 0) restante = 0;
+  return restante;
+}
+
+/* Devuelve el número del bloque que va a entrar a continuación */
+function calcularBloqueSiguienteEntrar(){
+  const tam = config.tamanoBloque;
+  const pendientes = Object.values(turnosCache)
+    .filter(t => t.estado === "pendiente")
+    .sort((a,b) => a.numero - b.numero);
+
+  if (bloqueActivo !== null && !bloqueActivoTerminado) {
+    for (const t of pendientes) {
+      const b = Math.ceil(t.numero / tam);
+      if (b > bloqueActivo) return b;
+    }
+    return null;
+  } else {
+    if (pendientes.length === 0) return null;
+    return Math.ceil(pendientes[0].numero / tam);
+  }
+}
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+
+function renderTurnos(){
+  const enTurnoDiv = document.getElementById("enTurno");
+  const preparateDiv = document.getElementById("preparate");
+
+  const tam = config.tamanoBloque;
+  const todos = Object.values(turnosCache);
+
+  // EN TURNO
+  const confirmadosActivos = todos
+    .filter(t => {
+      if (t.estado !== "confirmado") return false;
+      return calcularSegundosRestantesTurno(t) > 0;
+    })
+    .sort((a,b) => a.numero - b.numero);
+
+  const idsEnTurno = Object.keys(nodosEnTurno);
+  const nuevosIdsEnTurno = confirmadosActivos.map(t => t.id);
+  const mismosEnTurno =
+    idsEnTurno.length === nuevosIdsEnTurno.length &&
+    idsEnTurno.every((id, i) => id === nuevosIdsEnTurno[i]);
+
+  if (!mismosEnTurno) {
+    enTurnoDiv.innerHTML = "";
+    nodosEnTurno = {};
+
+    if (confirmadosActivos.length === 0) {
+      enTurnoDiv.innerHTML = '<div class="sin-turnos">Sin turnos en curso</div>';
+    } else {
+      confirmadosActivos.forEach(t => {
+        const div = document.createElement("div");
+        div.className = "cuadro azul";
+
+        const num = document.createElement("div");
+        num.className = "num";
+        num.textContent = t.numero;
+
+        const sub = document.createElement("div");
+        sub.className = "sub";
+        sub.textContent = formatearMMSS(calcularSegundosRestantesTurno(t));
+
+        div.appendChild(num);
+        div.appendChild(sub);
+        enTurnoDiv.appendChild(div);
+
+        nodosEnTurno[t.id] = { sub };
+      });
+    }
+  }
+
+  // PREPÁRATE
+  const pendientes = todos.filter(t => t.estado === "pendiente")
+                          .sort((a,b) => a.numero - b.numero);
+
+  const siguienteBloque = calcularBloqueSiguienteEntrar();
+
+  const pendientesBloque = siguienteBloque === null
+    ? []
+    : pendientes
+        .filter(t => Math.ceil(t.numero / tam) === siguienteBloque)
+        .sort((a,b) => a.numero - b.numero);
+
+  const idsPrep = Object.keys(nodosPreparate);
+  const nuevosIdsPrep = pendientesBloque.map(t => t.id);
+  const mismosPrep =
+    idsPrep.length === nuevosIdsPrep.length &&
+    idsPrep.every((id, i) => id === nuevosIdsPrep[i]);
+
+  if (!mismosPrep) {
+    preparateDiv.innerHTML = "";
+    nodosPreparate = {};
+
+    if (pendientesBloque.length === 0) {
+      preparateDiv.innerHTML = '<div class="sin-turnos">Sin turnos pendientes</div>';
+    } else {
+      pendientesBloque.forEach(t => {
+        const div = document.createElement("div");
+        div.className = "cuadro naranja";
+
+        const num = document.createElement("div");
+        num.className = "num";
+        num.textContent = t.numero;
+
+        const sub = document.createElement("div");
+        sub.className = "sub";
+        sub.textContent = "";
+
+        div.appendChild(num);
+        div.appendChild(sub);
+        preparateDiv.appendChild(div);
+
+        nodosPreparate[t.id] = { sub };
+      });
+    }
+  }
+
+  actualizarTemporizadoresDOM();
+}
+
+/* =========================================================
+   ACTUALIZACIÓN LIGERA
+   ========================================================= */
+
+function actualizarTemporizadoresDOM(){
+  const tam = config.tamanoBloque;
+  const temporizadorBloqueSeg = calcularTemporizadorBloque();
+
+  let textoPausa = "Pausa temporal";
+  if (config.horaReanudacion) {
+    textoPausa = "Reanuda " + config.horaReanudacion;
+  }
+
+  // EN TURNO
+  Object.entries(nodosEnTurno).forEach(([id, nodo]) => {
+    const t = turnosCache[id];
+    if (!t) return;
+    const segs = calcularSegundosRestantesTurno(t);
+    const txt = formatearMMSS(segs);
+    if (nodo.sub.textContent !== txt) {
+      nodo.sub.textContent = txt;
+    }
+  });
+
+  // PREPÁRATE
+  const bloqueSiguienteEntrar = calcularBloqueSiguienteEntrar();
+
+  Object.entries(nodosPreparate).forEach(([id, nodo]) => {
+    const t = turnosCache[id];
+    if (!t) return;
+
+    const b = Math.ceil(t.numero / tam);
+    let textoSub = "";
+
+    if (config.pausado) {
+      textoSub = textoPausa;
+    } else if (bloqueSiguienteEntrar === null) {
+      textoSub = "En espera";
+    } else if (b === bloqueSiguienteEntrar) {
+      if (bloqueActivo !== null && !bloqueActivoTerminado) {
+        const bloquesEntre = b - bloqueActivo - 1;
+        const totalSeg = (bloquesEntre * config.duracionTurnoSeg) + temporizadorBloqueSeg;
+        textoSub = "≈" + Math.ceil(totalSeg / 60) + " min";
+      } else {
+        textoSub = "Por iniciar";
+      }
+    } else {
+      const bloquesDistancia = b - bloqueSiguienteEntrar;
+      let totalSeg = bloquesDistancia * config.duracionTurnoSeg;
+
+      if (bloqueActivo !== null && !bloqueActivoTerminado) {
+        const bloquesEntre = b - bloqueActivo - 1;
+        totalSeg = (bloquesEntre * config.duracionTurnoSeg) + temporizadorBloqueSeg;
+      }
+
+      textoSub = "≈" + Math.ceil(totalSeg / 60) + " min";
+    }
+
+    if (nodo.sub.textContent !== textoSub) {
+      nodo.sub.textContent = textoSub;
+    }
+  });
+}
+
+/* =========================================================
+   TICK cada segundo
+   ========================================================= */
+
+function tick(){
+  // Si el bloque activo ya cumplió su tiempo, marcarlo como terminado
+  if (bloqueActivo !== null && !bloqueActivoTerminado) {
+    if (calcularTemporizadorBloque() <= 0) {
+      bloqueActivoTerminado = true;
+      renderTurnos();
+    }
+  }
+
+  actualizarTemporizadoresDOM();
+
+  const idsEnTurno = Object.keys(nodosEnTurno);
+  const idsVigentes = idsEnTurno.filter(id => {
+    const t = turnosCache[id];
+    if (!t) return false;
+    if (t.estado !== "confirmado") return false;
+    return calcularSegundosRestantesTurno(t) > 0;
+  });
+
+  if (idsVigentes.length !== idsEnTurno.length) {
+    renderTurnos();
+  }
+
+  actualizarTiempoEsperaMostrado();
+}
+
+/* =========================================================
+   MAYÚSCULAS AUTOMÁTICAS
+   ========================================================= */
+
+["empleado","nombre","apPaterno","apMaterno"].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener("input", () => {
+    const pos = el.selectionStart;
+    el.value = el.value.toUpperCase();
+    el.setSelectionRange(pos, pos);
+  });
+});
+
+/* =========================================================
+   BUSCAR POR NÚMERO DE EMPLEADO
+   ========================================================= */
+
+const inputEmpleado = document.getElementById("empleado");
+
+inputEmpleado.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    buscarPorEmpleado();
+  }
+});
+
+inputEmpleado.addEventListener("blur", () => {
+  if (inputEmpleado.value.trim()) {
+    buscarPorEmpleado();
+  }
+});
+
+let ultimoNumeroBuscado = "";
+
+window.buscarPorEmpleado = async function(){
+  const numero = inputEmpleado.value.trim().toUpperCase();
+  const zona = document.getElementById("zonaResultados");
+
+  if (!numero) {
+    zona.innerHTML = "";
+    ultimoNumeroBuscado = "";
+    return;
+  }
+
+  const numeroNorm = normalizar(numero);
+
+  const encontrados = Object.values(turnosCache)
+    .filter(t => normalizar(t.empleado) === numeroNorm)
+    .sort((a,b) => a.numero - b.numero);
+
+  ultimoNumeroBuscado = numero;
+
+  zona.innerHTML = "";
+
+  if (encontrados.length === 0) {
+    zona.innerHTML = `
+      <div class="titulo-seccion">Registros encontrados</div>
+      <div class="sin-resultados">No se encontraron registros con ese número.</div>
+    `;
+  } else {
+    const titulo = document.createElement("div");
+    titulo.className = "titulo-seccion";
+    titulo.textContent = "Registros encontrados";
+    zona.appendChild(titulo);
+
+    const lista = document.createElement("div");
+    lista.className = "lista-registros";
+
+    encontrados.forEach(t => {
+      const tarjeta = document.createElement("div");
+      tarjeta.className = "tarjeta";
+
+      const info = document.createElement("div");
+      info.className = "info";
+
+      const nombre = document.createElement("div");
+      nombre.className = "nombre";
+      nombre.textContent = t.nombreCompleto || "(Sin nombre)";
+
+      const turnoInfo = document.createElement("div");
+      turnoInfo.className = "turno-info";
+      turnoInfo.textContent = "Turno " + t.numero;
+
+      info.appendChild(nombre);
+      info.appendChild(turnoInfo);
+
+      const badge = document.createElement("span");
+      badge.className = "badge badge-" + (t.estado || "pendiente");
+      badge.textContent = etiquetaEstado(t.estado);
+
+      tarjeta.appendChild(info);
+      tarjeta.appendChild(badge);
+
+      tarjeta.addEventListener("click", () => {
+        abrirTurnoExistente(t);
+      });
+
+      lista.appendChild(tarjeta);
+    });
+
+    zona.appendChild(lista);
+  }
+
+  const btnNuevo = document.createElement("button");
+  btnNuevo.textContent = "+ Asignar nuevo turno";
+  btnNuevo.style.marginTop = "15px";
+  btnNuevo.className = "btn-naranja";
+  btnNuevo.addEventListener("click", () => {
+    irAFormularioNuevo(numero);
+  });
+  zona.appendChild(btnNuevo);
+};
+
+/* =========================================================
+   ABRIR TURNO EXISTENTE
+   ========================================================= */
+
+function abrirTurnoExistente(turno){
+  document.getElementById("pantallaBuscar").style.display = "none";
+  document.getElementById("pantallaFormulario").style.display = "none";
+  document.getElementById("resultado").style.display = "block";
+
+  document.getElementById("zonaBotonOtro").style.display = "none";
+  document.getElementById("zonaBotonVolver").style.display = "block";
+
+  document.getElementById("datosEmpleado").innerHTML =
+    "Empleado: " + turno.empleado +
+    "<br>" + (turno.nombreCompleto || "") +
+    "<br>Turno: " + turno.numero;
+
+  QRCode.toCanvas(
+    document.getElementById("qr"),
+    turno.id,
+    { width: 200 }
+  );
+
+  turnoMostrado = turno;
+  actualizarTiempoEsperaMostrado();
+}
+
+/* =========================================================
+   IR A FORMULARIO NUEVO
+   ========================================================= */
+
+function irAFormularioNuevo(numero){
+  document.getElementById("pantallaBuscar").style.display = "none";
+  document.getElementById("resultado").style.display = "none";
+  document.getElementById("pantallaFormulario").style.display = "block";
+
+  document.getElementById("empleadoForm").value = numero.toUpperCase();
+  document.getElementById("nombre").value = "";
+  document.getElementById("apPaterno").value = "";
+  document.getElementById("apMaterno").value = "";
+  document.getElementById("nombre").focus();
+}
+
+/* =========================================================
+   VOLVER A LA PANTALLA DE BÚSQUEDA
+   ========================================================= */
+
+window.volverABuscar = function(){
+  document.getElementById("pantallaFormulario").style.display = "none";
+  document.getElementById("resultado").style.display = "none";
+  document.getElementById("pantallaBuscar").style.display = "block";
+
+  document.getElementById("datosEmpleado").innerHTML = "";
+  document.getElementById("zonaTiempoEspera").innerHTML = "";
+  document.getElementById("nombre").value = "";
+  document.getElementById("apPaterno").value = "";
+  document.getElementById("apMaterno").value = "";
+  ocultarMensaje();
+
+  turnoMostrado = null;
+
+  buscarPorEmpleado();
+};
+
+/* =========================================================
+   ASIGNAR TURNO NUEVO
+   ========================================================= */
+
+window.asignarTurno = async function(){
+  const btn = document.getElementById("btnAsignar");
+  ocultarMensaje();
+
+  const empleado = document.getElementById("empleadoForm").value.trim().toUpperCase();
+  const nombre = document.getElementById("nombre").value.trim().toUpperCase();
+  const apP = document.getElementById("apPaterno").value.trim().toUpperCase();
+  const apM = document.getElementById("apMaterno").value.trim().toUpperCase();
+
+  if (!empleado || !nombre || !apP || !apM) {
+    mostrarMensaje("error", "Completa todos los campos.");
+    return;
+  }
+
+  if (config.pausado) {
+    const texto = config.horaReanudacion
+      ? "Pausa temporal. Reanuda a las " + config.horaReanudacion
+      : "Pausa temporal. Vuelve más tarde.";
+    mostrarMensaje("pausa", texto);
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Procesando...";
+
+  try {
+    const nombreCompleto = nombre + " " + apP + " " + apM;
+    const claveUnica = [
+      normalizar(empleado),
+      normalizar(nombre),
+      normalizar(apP),
+      normalizar(apM)
+    ].join("|");
+
+    const snap = await get(ref(db, `${ROOT}/turnos`));
+    let existente = null;
+
+    if (snap.exists()) {
+      snap.forEach(child => {
+        const d = child.val();
+        if (d.claveUnica === claveUnica) {
+          existente = { id: child.key, ...d };
+        }
+      });
+    }
+
+    if (existente && (existente.estado === "pendiente" || existente.estado === "confirmado")) {
+      document.getElementById("pantallaFormulario").style.display = "none";
+      document.getElementById("resultado").style.display = "block";
+
+      document.getElementById("zonaBotonOtro").style.display = "none";
+      document.getElementById("zonaBotonVolver").style.display = "block";
+
+      document.getElementById("datosEmpleado").innerHTML =
+        "Empleado: " + existente.empleado +
+        "<br>" + existente.nombreCompleto +
+        "<br>Turno: " + existente.numero;
+
+      QRCode.toCanvas(document.getElementById("qr"), existente.id, { width: 200 });
+
+      turnoMostrado = existente;
+      actualizarTiempoEsperaMostrado();
+
+      mostrarMensaje("info", "Ya tienes un turno asignado.");
+      return;
+    }
+
+    const contRef = ref(db, `${ROOT}/contador/turnoActual`);
+    const resultado = await runTransaction(contRef, (actual) => {
+      return (actual || 0) + 1;
+    });
+    const nuevoNumero = resultado.snapshot.val();
+
+    const nuevoRef = push(ref(db, `${ROOT}/turnos`));
+    const nuevoTurno = {
+      numero: nuevoNumero,
+      empleado: empleado,
+      nombre: nombre,
+      apPaterno: apP,
+      apMaterno: apM,
+      nombreCompleto: nombreCompleto,
+      estado: "pendiente",
+      horaAsignado: new Date().toLocaleString(),
+      horaAsignadoMs: Date.now(),
+      claveUnica: claveUnica,
+      fechaConfirmado: "",
+      fechaConfirmadoMs: 0,
+      fechaCancelacion: "",
+      motivoCancelacion: "",
+      fechaConcluido: "",
+      fechaConcluidoMs: 0
+    };
+
+    await set(nuevoRef, nuevoTurno);
+
+    document.getElementById("pantallaFormulario").style.display = "none";
+    document.getElementById("resultado").style.display = "block";
+
+    document.getElementById("zonaBotonOtro").style.display = "block";
+    document.getElementById("zonaBotonVolver").style.display = "none";
+
+    document.getElementById("datosEmpleado").innerHTML =
+      "Empleado: " + nuevoTurno.empleado +
+      "<br>" + nuevoTurno.nombreCompleto +
+      "<br>Turno: " + nuevoTurno.numero;
+
+    QRCode.toCanvas(document.getElementById("qr"), nuevoRef.key, { width: 200 });
+
+    turnoMostrado = { id: nuevoRef.key, ...nuevoTurno };
+    actualizarTiempoEsperaMostrado();
+
+    mostrarMensaje("ok", "Turno asignado correctamente.");
+
+  } catch (e) {
+    console.error(e);
+    mostrarMensaje("error", "Ocurrió un error. Intenta de nuevo.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Obtener Turno";
+  }
+};
+
+/* =========================================================
+   TIEMPO DE ESPERA (debajo del QR)
+   ========================================================= */
+
+function actualizarTiempoEsperaMostrado(){
+  if (!turnoMostrado) return;
+
+  const zona = document.getElementById("zonaTiempoEspera");
+  const turnoActualizado = turnosCache[turnoMostrado.id] || turnoMostrado;
+
+  const tam = config.tamanoBloque;
+  const b = Math.ceil(turnoActualizado.numero / tam);
+
+  let texto = "";
+  let claseColor = "gris";
+  let mostrarMinutos = false;
+  let minutos = 0;
+
+  if (config.pausado) {
+    texto = config.horaReanudacion
+      ? "Pausa temporal — reanuda " + config.horaReanudacion
+      : "Pausa temporal";
+    claseColor = "gris";
+  } else if (turnoActualizado.estado === "confirmado") {
+    const segs = calcularSegundosRestantesTurno(turnoActualizado);
+    if (segs > 0) {
+      texto = "Tu turno ya inició — quedan " + formatearMMSS(segs);
+      claseColor = segs <= 60 ? "verde" : (segs <= 180 ? "amarillo" : "azul");
+    } else {
+      texto = "Tu tiempo terminó";
+      claseColor = "gris";
+    }
+  } else if (turnoActualizado.estado === "concluido") {
+    texto = "Tu tiempo terminó";
+    claseColor = "gris";
+  } else if (turnoActualizado.estado === "cancelado") {
+    texto = "Turno cancelado";
+    claseColor = "gris";
+  } else {
+    // Es un turno pendiente → calcular su tiempo estimado
+    const bloqueSiguienteEntrar = calcularBloqueSiguienteEntrar();
+
+    if (bloqueSiguienteEntrar === null) {
+      texto = "En espera";
+      claseColor = "gris";
+    } else if (b === bloqueSiguienteEntrar) {
+      if (bloqueActivo !== null && !bloqueActivoTerminado) {
+        // Ya está corriendo un bloque → tiempo real
+        const bloquesEntre = b - bloqueActivo - 1;
+        const totalSeg = (bloquesEntre * config.duracionTurnoSeg) + calcularTemporizadorBloque();
+        minutos = Math.ceil(totalSeg / 60);
+        mostrarMinutos = true;
+      } else {
+        // Es el siguiente a entrar y aún no arranca
+        texto = "Por iniciar";
+        claseColor = "gris";
+      }
+    } else {
+      // Bloque posterior al siguiente
+      const bloquesDistancia = b - bloqueSiguienteEntrar;
+      let totalSeg = bloquesDistancia * config.duracionTurnoSeg;
+
+      if (bloqueActivo !== null && !bloqueActivoTerminado) {
+        const bloquesEntre = b - bloqueActivo - 1;
+        totalSeg = (bloquesEntre * config.duracionTurnoSeg) + calcularTemporizadorBloque();
+      }
+
+      minutos = Math.ceil(totalSeg / 60);
+      mostrarMinutos = true;
+    }
+
+    if (mostrarMinutos) {
+      if (minutos > 20) claseColor = "azul";
+      else if (minutos >= 10) claseColor = "amarillo";
+      else claseColor = "verde";
+    }
+  }
+
+  const nuevoHTML = mostrarMinutos
+    ? `<div class="tiempo-espera-box ${claseColor}">
+         Tiempo aproximado de espera<br>
+         <span class="min">${minutos} min</span>
+       </div>`
+    : `<div class="tiempo-espera-box ${claseColor}">
+         ${texto}
+       </div>`;
+
+  if (zona.innerHTML !== nuevoHTML) {
+    zona.innerHTML = nuevoHTML;
+  }
+}
+
+/* =========================================================
+   ARRANQUE
+   ========================================================= */
+
+(async function iniciar(){
+  await inicializarFirebase();
+  escucharConfig();
+  escucharTurnos();
+  setInterval(tick, 1000);
+})();
+
+</script>
+
+</body>
+</html>

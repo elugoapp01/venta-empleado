@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Confirmar Turno</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body{
+  font-family: Arial, sans-serif;
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+  background: white;
+  -webkit-text-size-adjust: 100%;
+}
+
+.contenido{ flex:1; padding: 15px 12px; }
+
+.logo-top{ width:120px; max-width:40vw; margin-top:10px; }
+
+h2 { font-size: 22px; margin: 15px 0 20px 0; }
+
+#reader{
+  width:100%;
+  max-width:500px;
+  margin:20px auto;
+}
+
+.overlay{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  display:none;
+  justify-content:center;
+  align-items:center;
+  font-size:36px;
+  font-weight:bold;
+  color:white;
+  text-align:center;
+  padding:20px;
+  z-index:999;
+  line-height:1.3;
+}
+
+footer{
+  text-align:center;
+  padding:10px 0;
+}
+
+.logo-footer{
+  width:70px;
+  display:block;
+  margin:0 auto 5px auto;
+}
+
+.derechos{
+  font-size:12px;
+  color:#555;
+}
+
+@media (max-width: 380px){
+  .overlay{ font-size: 28px; }
+  h2{ font-size: 19px; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="contenido">
+
+  <img src="logo.png" class="logo-top">
+  <h2>Escanear Turno</h2>
+
+  <div id="reader"></div>
+
+</div>
+
+<div id="overlay" class="overlay"></div>
+
+<footer>
+  <img src="Lugo rojo.png" class="logo-footer">
+  <div class="derechos">Derechos reservados.</div>
+</footer>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getDatabase, ref, get, update
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA0wUh8AqTOT36ofTMVHdKSRqWZ1MMhHzY",
+  authDomain: "venta-empleado.firebaseapp.com",
+  databaseURL: "https://venta-empleado-default-rtdb.firebaseio.com/",
+  projectId: "venta-empleado",
+  storageBucket: "venta-empleado.firebasestorage.app",
+  messagingSenderId: "655370302032",
+  appId: "1:655370302032:web:bc276acc7683a67b49d755"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const ROOT = "turnosEvento";
+
+let html5QrCode = null;
+let procesando = false;
+
+/* =========================================================
+   OVERLAY (mensajes grandes con color)
+   ========================================================= */
+
+function mostrar(color, mensaje, reiniciar = true){
+  const overlay = document.getElementById("overlay");
+  overlay.style.background = color;
+  overlay.innerHTML = mensaje;
+  overlay.style.display = "flex";
+
+  if (reiniciar) {
+    setTimeout(() => {
+      overlay.style.display = "none";
+      iniciarEscaner();
+    }, 4000);
+  }
+}
+
+/* =========================================================
+   INICIAR ESCÁNER
+   ========================================================= */
+
+async function iniciarEscaner(){
+  if (!html5QrCode) {
+    html5QrCode = new Html5Qrcode("reader");
+  }
+
+  try {
+    await html5QrCode.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      async (decodedText) => {
+        if (procesando) return;
+        procesando = true;
+
+        try {
+          await html5QrCode.stop();
+        } catch(e){}
+
+        await procesarEscaneo(decodedText);
+      }
+    );
+  } catch (e) {
+    console.error("Error al iniciar escáner:", e);
+    mostrar("#b71c1c", "ERROR DE CÁMARA ❌<br>Revisa permisos", false);
+  }
+}
+
+/* =========================================================
+   PROCESAR CÓDIGO ESCANEADO
+   ========================================================= */
+
+async function procesarEscaneo(textoQR){
+  const id = (textoQR || "").trim();
+
+  if (!id) {
+    mostrar("#b71c1c", "QR INVÁLIDO ❌");
+    return;
+  }
+
+  try {
+    // Consultar el turno por id
+    const snap = await get(ref(db, `${ROOT}/turnos/${id}`));
+
+    if (!snap.exists()) {
+      mostrar("#b71c1c", "TURNO NO VÁLIDO ❌");
+      return;
+    }
+
+    const turno = snap.val();
+
+    if (turno.estado === "confirmado") {
+      mostrar("#b71c1c", "YA UTILIZADO ❌");
+      return;
+    }
+
+    if (turno.estado === "cancelado") {
+      mostrar("#b71c1c", "TURNO CANCELADO ❌");
+      return;
+    }
+
+    // Marcar como confirmado
+    await update(ref(db, `${ROOT}/turnos/${id}`), {
+      estado: "confirmado",
+      fechaConfirmado: new Date().toLocaleString(),
+      fechaConfirmadoMs: Date.now()
+    });
+
+    // Voz
+    try {
+      speechSynthesis.cancel();
+      speechSynthesis.speak(new SpeechSynthesisUtterance("Turno " + turno.numero + " acceso permitido"));
+    } catch(e){}
+
+    mostrar("#1b5e20", "ACCESO PERMITIDO ✅<br>Turno " + turno.numero);
+
+  } catch (e) {
+    console.error("Error procesando escaneo:", e);
+    mostrar("#b71c1c", "ERROR AL PROCESAR ❌");
+  } finally {
+    setTimeout(() => { procesando = false; }, 1000);
+  }
+}
+
+/* =========================================================
+   ARRANQUE
+   ========================================================= */
+
+iniciarEscaner();
+
+</script>
+
+</body>
+</html>

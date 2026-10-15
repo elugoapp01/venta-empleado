@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor de Turnos</title>
+
+<style>
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body{
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: #f4f6f9;
+  color: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* HEADER */
+.header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 28px;
+  background: #ffffff;
+  border-bottom: 1px solid #e0e4eb;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  flex-shrink: 0;
+}
+
+.header-left{
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.header-left img{ height: 42px; }
+.header-left .titulo-app{
+  font-size: 18px;
+  font-weight: 600;
+  color: #1565c0;
+  letter-spacing: 0.3px;
+}
+
+.header-right{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.control{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f4f6f9;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid #e0e4eb;
+}
+.control label{
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.btn-tamano{
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid #cfd6e0;
+  background: white;
+  color: #1565c0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-tamano:hover{ background: #eef4fb; }
+.btn-tamano.activo{
+  background: #1565c0;
+  color: white;
+  border-color: #1565c0;
+  box-shadow: 0 2px 6px rgba(21,101,192,0.3);
+}
+
+.input-min{
+  width: 70px;
+  padding: 6px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid #cfd6e0;
+  border-radius: 6px;
+  outline: none;
+}
+.input-min:focus{
+  border-color: #1565c0;
+  box-shadow: 0 0 0 3px rgba(21,101,192,0.12);
+}
+
+.btn-pausa{
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: #2e7d32;
+  color: white;
+  letter-spacing: 0.3px;
+}
+.btn-pausa:hover{ filter: brightness(1.08); }
+.btn-pausa.pausado{
+  background: #ef6c00;
+  animation: pulso 1.8s infinite;
+}
+@keyframes pulso{
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,108,0,0.5); }
+  50% { box-shadow: 0 0 0 8px rgba(239,108,0,0); }
+}
+
+.banner-pausa{
+  display: none;
+  background: #ef6c00;
+  color: white;
+  text-align: center;
+  padding: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+.banner-pausa.activo{ display: block; }
+
+/* MAIN */
+.main{
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 24px 28px;
+  overflow: hidden;
+}
+
+.panel{
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border: 1px solid #e6eaf0;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.panel-header{
+  padding: 16px 24px;
+  border-bottom: 1px solid #eef1f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.panel-header h2{
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+.panel-header .indicador{
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.4px;
+}
+.panel.turno .panel-header h2{ color: #1565c0; }
+.panel.turno .indicador{ background: #e3f2fd; color: #0d47a1; }
+.panel.preparate .panel-header h2{ color: #ef6c00; }
+.panel.preparate .indicador{ background: #fff3e0; color: #e65100; }
+
+.panel-body{
+  flex: 1;
+  padding: 20px 24px 24px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.cuadricula{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.cuadro{
+  width: 90px;
+  height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  padding: 6px;
+  text-align: center;
+}
+.cuadro .num{ font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+.cuadro .sub{
+  font-size: 12px;
+  margin-top: 8px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.cuadro.azul{ background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%); }
+.cuadro.naranja{ background: linear-gradient(135deg, #fb8c00 0%, #ef6c00 100%); }
+
+.vacio{
+  text-align: center;
+  color: #a0aab5;
+  margin: auto;
+}
+.vacio .icono{ font-size: 56px; margin-bottom: 10px; opacity: 0.5; }
+.vacio .texto{ font-size: 18px; font-weight: 600; letter-spacing: 0.5px; }
+
+/* FOOTER */
+.footer{
+  padding: 12px 28px;
+  background: #ffffff;
+  border-top: 1px solid #e0e4eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #8892a0;
+  flex-shrink: 0;
+}
+.footer-left{ display: flex; align-items: center; gap: 10px; }
+.footer-left img{ height: 26px; opacity: 0.85; }
+.footer .btn-modal{
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #1565c0;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.footer .btn-modal:hover{ background: #0d47a1; }
+
+/* MODALES */
+.modal-overlay{
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.55);
+  backdrop-filter: blur(2px);
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  padding: 24px;
+}
+.modal-overlay.active{ display: flex; }
+
+.modal-box{
+  background: white;
+  border-radius: 14px;
+  padding: 0;
+  max-width: 900px;
+  width: 100%;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  overflow: hidden;
+}
+.modal-header{
+  padding: 18px 24px;
+  border-bottom: 1px solid #eef1f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.modal-header h2{
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1565c0;
+}
+.modal-header .cerrar-x{
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: #8892a0;
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 1;
+}
+.modal-header .cerrar-x:hover{ color: #333; }
+
+.buscador-wrap{
+  padding: 14px 24px;
+  border-bottom: 1px solid #eef1f6;
+  background: #fafbfd;
+  flex-shrink: 0;
+}
+.buscador{
+  width: 100%;
+  padding: 11px 16px;
+  font-size: 15px;
+  border: 1px solid #cfd6e0;
+  border-radius: 10px;
+  outline: none;
+  transition: 0.15s;
+  background: white;
+}
+.buscador:focus{
+  border-color: #1565c0;
+  box-shadow: 0 0 0 3px rgba(21,101,192,0.12);
+}
+.contador-resultados{
+  margin-top: 8px;
+  font-size: 12px;
+  color: #8892a0;
+  font-weight: 600;
+}
+
+.modal-scroll{ overflow-y: auto; flex: 1; }
+
+.tabla-turnos{ width: 100%; border-collapse: collapse; font-size: 14px; }
+.tabla-turnos thead th{
+  background: #f4f6f9;
+  color: #555;
+  padding: 12px 18px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  border-bottom: 1px solid #e0e4eb;
+  z-index: 2;
+}
+.tabla-turnos tbody td{
+  padding: 11px 18px;
+  border-bottom: 1px solid #eef1f6;
+}
+.tabla-turnos tbody tr:hover{ background: #f9fafc; }
+
+.estado-badge{
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 12px;
+  color: white;
+}
+.estado-pendiente{ background: #ef6c00; }
+.estado-confirmado{ background: #2e7d32; }
+.estado-concluido{ background: #94a3b8; }
+.estado-cancelado{ background: #6b7280; }
+
+.fila-cancelada td{
+  color: #94a3b8;
+  text-decoration: line-through;
+  text-decoration-color: #cbd5e1;
+}
+.fila-concluida td{ color: #94a3b8; }
+
+.sin-resultados{
+  text-align: center;
+  color: #999;
+  padding: 40px;
+  font-size: 14px;
+}
+
+.modal-footer{
+  padding: 14px 24px;
+  border-top: 1px solid #eef1f6;
+  text-align: right;
+  flex-shrink: 0;
+}
+.modal-footer button{
+  padding: 9px 24px;
+  font-size: 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  background: #e8edf3;
+  color: #333;
+}
+.modal-footer button:hover{ background: #dde3ea; }
+
+/* MODAL PAUSA */
+.modal-pausa-box{
+  background: white;
+  border-radius: 14px;
+  padding: 26px 24px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  text-align: center;
+}
+.modal-pausa-box h3{ margin: 0 0 8px 0; font-size: 20px; color: #ef6c00; }
+.modal-pausa-box p{ margin: 0 0 20px 0; font-size: 14px; color: #666; line-height: 1.4; }
+
+.pausa-input-wrap{ display: flex; justify-content: center; }
+
+.modal-pausa-box input[type="time"]{
+  font-size: 22px;
+  padding: 12px 16px;
+  border: 2px solid #cfd6e0;
+  border-radius: 10px;
+  text-align: center;
+  width: 100%;
+  max-width: 260px;
+  font-weight: 700;
+  color: #333;
+  outline: none;
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  line-height: normal;
+}
+.modal-pausa-box input[type="time"]::-webkit-calendar-picker-indicator{
+  cursor: pointer;
+  opacity: 0.7;
+  width: 20px;
+  height: 20px;
+}
+.modal-pausa-box input[type="time"]:focus{
+  border-color: #ef6c00;
+  box-shadow: 0 0 0 3px rgba(239,108,0,0.15);
+}
+.modal-pausa-acciones{
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 22px;
+}
+.modal-pausa-acciones button{
+  padding: 11px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.btn-pausa-confirmar{ background: #ef6c00; color: white; }
+.btn-pausa-confirmar:hover{ filter: brightness(1.08); }
+.btn-pausa-cancelar{ background: #e8edf3; color: #333; }
+.btn-pausa-cancelar:hover{ background: #dde3ea; }
+
+@media (max-width: 900px){
+  .main{ grid-template-columns: 1fr; gap: 14px; padding: 16px; }
+  .header{ flex-direction: column; gap: 12px; align-items: stretch; }
+  .header-right{ justify-content: center; flex-wrap: wrap; }
+  .cuadro{ width: 75px; height: 88px; }
+  .cuadro .num{ font-size: 26px; }
+  .cuadro .sub{ font-size: 11px; }
+  .tabla-turnos thead th,
+  .tabla-turnos tbody td{ padding: 8px 10px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <img src="logo.png" alt="Logo">
+    <div class="titulo-app">Monitor de Turnos</div>
+  </div>
+
+  <div class="header-right">
+    <div class="control">
+      <label>Tamaño bloque</label>
+      <button class="btn-tamano" data-tam="5">5</button>
+      <button class="btn-tamano" data-tam="10">10</button>
+      <button class="btn-tamano" data-tam="15">15</button>
+    </div>
+
+    <div class="control">
+      <label>Duración</label>
+      <input type="number" id="inputDuracion" class="input-min" min="1" max="120" value="10">
+      <span style="font-size:12px;color:#555;font-weight:600;">min</span>
+    </div>
+
+    <button class="btn-pausa" id="btnPausa">⏸ Pausar tiempo</button>
+  </div>
+</div>
+
+<div class="banner-pausa" id="bannerPausa">
+  ⏸ SISTEMA EN PAUSA
+</div>
+
+<div class="main">
+  <div class="panel turno">
+    <div class="panel-header">
+      <h2>En turno</h2>
+      <span class="indicador" id="indicadorTurno">En espera</span>
+    </div>
+    <div class="panel-body" id="panelTurno">
+      <div class="vacio">
+        <div class="icono">⏳</div>
+        <div class="texto">Sin turnos en curso</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel preparate">
+    <div class="panel-header">
+      <h2>Prepárate, casi es tu turno</h2>
+      <span class="indicador" id="indicadorPreparate">Nada en espera</span>
+    </div>
+    <div class="panel-body" id="panelPreparate">
+      <div class="vacio">
+        <div class="icono">📋</div>
+        <div class="texto">Sin turnos pendientes</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-left">
+    <img src="Lugo rojo.png" alt="Lugo">
+    <span>Derechos reservados · 2026</span>
+  </div>
+  <button class="btn-modal" id="abrirModalBtn">📋 Ver todos los turnos</button>
+</div>
+
+<!-- MODAL TURNOS -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>📋 Todos los turnos</h2>
+      <button class="cerrar-x" id="cerrarX">✕</button>
+    </div>
+
+    <div class="buscador-wrap">
+      <input type="text" id="buscador" class="buscador"
+        placeholder="Buscar por turno, empleado, nombre o estado..." autocomplete="off">
+      <div class="contador-resultados" id="contadorResultados"></div>
+    </div>
+
+    <div class="modal-scroll">
+      <table class="tabla-turnos">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Empleado</th>
+            <th>Nombre</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="tablaTurnosBody">
+          <tr>
+            <td colspan="4" style="text-align:center; color:#999; padding:30px;">
+              Cargando turnos...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="modal-footer">
+      <button id="btnCerrarModal">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PAUSA -->
+<div class="modal-overlay" id="modalPausaOverlay">
+  <div class="modal-pausa-box">
+    <h3>⏸ Pausar tiempo</h3>
+    <p>Indica la hora a la que se reanuda el sistema:</p>
+
+    <div class="pausa-input-wrap">
+      <input type="time" id="inputHoraReanudacion" value="">
+    </div>
+
+    <div class="modal-pausa-acciones">
+      <button class="btn-pausa-cancelar" id="btnCancelarPausa">Cancelar</button>
+      <button class="btn-pausa-confirmar" id="btnConfirmarPausa">Pausar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getDatabase, ref, onValue, update, get, set
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA0wUh8AqTOT36ofTMVHdKSRqWZ1MMhHzY",
+  authDomain: "venta-empleado.firebaseapp.com",
+  databaseURL: "https://venta-empleado-default-rtdb.firebaseio.com/",
+  projectId: "venta-empleado",
+  storageBucket: "venta-empleado.firebasestorage.app",
+  messagingSenderId: "655370302032",
+  appId: "1:655370302032:web:bc276acc7683a67b49d755"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const ROOT = "turnosEvento";
+
+/* =========================================================
+   ESTADO
+   ========================================================= */
+
+let config = { tamanoBloque: 10, duracionTurnoSeg: 600, pausado: false, horaReanudacion: "" };
+let turnosCache = {};
+let bloqueActivo = null;
+let bloqueArranqueMs = null;
+let bloqueActivoTerminado = false;
+let pausaInicioMs = null;
+let pausaAcumuladaMs = 0;
+let cancelacionHechaPorBloque = {};
+let filtroBusqueda = "";
+
+const concluidosProcesados = new Set();
+
+let nodosEnTurno = {};
+let nodosPreparate = {};
+
+/* =========================================================
+   DOM
+   ========================================================= */
+
+const modalOverlay = document.getElementById('modalOverlay');
+const tablaBody = document.getElementById('tablaTurnosBody');
+const btnCerrarModal = document.getElementById('btnCerrarModal');
+const cerrarX = document.getElementById('cerrarX');
+const abrirModalBtn = document.getElementById('abrirModalBtn');
+const btnPausa = document.getElementById('btnPausa');
+const bannerPausa = document.getElementById('bannerPausa');
+const panelTurno = document.getElementById('panelTurno');
+const panelPreparate = document.getElementById('panelPreparate');
+const indicadorTurno = document.getElementById('indicadorTurno');
+const indicadorPreparate = document.getElementById('indicadorPreparate');
+
+const modalPausaOverlay = document.getElementById('modalPausaOverlay');
+const inputHoraReanudacion = document.getElementById('inputHoraReanudacion');
+const btnCancelarPausa = document.getElementById('btnCancelarPausa');
+const btnConfirmarPausa = document.getElementById('btnConfirmarPausa');
+
+const buscador = document.getElementById('buscador');
+const contadorResultados = document.getElementById('contadorResultados');
+
+const inputDuracion = document.getElementById('inputDuracion');
+
+/* =========================================================
+   UTILIDADES
+   ========================================================= */
+
+function formatearMMSS(segundos){
+  if (segundos < 0) segundos = 0;
+  const m = Math.floor(segundos / 60).toString().padStart(2,"0");
+  const s = Math.floor(segundos % 60).toString().padStart(2,"0");
+  return m + ":" + s;
+}
+
+function normalizar(str){
+  return (str || "")
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/* =========================================================
+   CÁLCULOS
+   ========================================================= */
+
+function calcularSegundosRestantesTurno(t){
+  if (!t.fechaConfirmadoMs) return config.duracionTurnoSeg;
+  const transcurrido = Date.now() - t.fechaConfirmadoMs;
+  let restante = config.duracionTurnoSeg - Math.floor(transcurrido / 1000);
+  if (restante < 0) restante = 0;
+  return restante;
+}
+
+function calcularTemporizadorBloque(){
+  if (bloqueActivo === null || bloqueArranqueMs === null) {
+    return config.duracionTurnoSeg;
+  }
+  let transcurrido;
+  if (config.pausado && pausaInicioMs) {
+    transcurrido = pausaInicioMs - bloqueArranqueMs - pausaAcumuladaMs;
+  } else {
+    transcurrido = Date.now() - bloqueArranqueMs - pausaAcumuladaMs;
+  }
+  let restante = config.duracionTurnoSeg - Math.floor(transcurrido / 1000);
+  if (restante < 0) restante = 0;
+  return restante;
+}
+
+/* =========================================================
+   INICIALIZACIÓN
+   ========================================================= */
+
+async function inicializarFirebase(){
+  try {
+    const cfgTamRef = ref(db, `${ROOT}/config/tamanoBloque`);
+    const snapTam = await get(cfgTamRef);
+    if (!snapTam.exists()) await set(cfgTamRef, 10);
+
+    const cfgDurRef = ref(db, `${ROOT}/config/duracionTurnoSeg`);
+    const snapDur = await get(cfgDurRef);
+    if (!snapDur.exists()) await set(cfgDurRef, 600);
+
+    const cfgPauRef = ref(db, `${ROOT}/config/pausado`);
+    const snapPau = await get(cfgPauRef);
+    if (!snapPau.exists()) await set(cfgPauRef, false);
+
+    const cfgHoraRef = ref(db, `${ROOT}/config/horaReanudacion`);
+    const snapHora = await get(cfgHoraRef);
+    if (!snapHora.exists()) await set(cfgHoraRef, "");
+
+    const contRef = ref(db, `${ROOT}/contador/turnoActual`);
+    const snapCont = await get(contRef);
+    if (!snapCont.exists()) await set(contRef, 0);
+
+    console.log("Firebase inicializado.");
+  } catch (e) {
+    console.error("Error inicializando Firebase:", e);
+  }
+}
+
+/* =========================================================
+   CONFIG
+   ========================================================= */
+
+function escucharConfig(){
+  onValue(ref(db, `${ROOT}/config`), snap => {
+    const c = snap.val() || {};
+    config.tamanoBloque = parseInt(c.tamanoBloque) || 10;
+    config.duracionTurnoSeg = parseInt(c.duracionTurnoSeg) || 600;
+    config.horaReanudacion = c.horaReanudacion || "";
+
+    const pausadoAnterior = config.pausado;
+    config.pausado = !!c.pausado;
+
+    if (config.pausado && !pausadoAnterior) {
+      pausaInicioMs = Date.now();
+    } else if (!config.pausado && pausadoAnterior && pausaInicioMs) {
+      pausaAcumuladaMs += Date.now() - pausaInicioMs;
+      pausaInicioMs = null;
+    }
+
+    actualizarBotonesTamano();
+    actualizarBotonPausa();
+    actualizarInputDuracion();
+    renderBloques();
+  });
+}
+
+/* =========================================================
+   TURNOS
+   ========================================================= */
+
+function escucharTurnos(){
+  onValue(ref(db, `${ROOT}/turnos`), snap => {
+    turnosCache = {};
+    if (snap.exists()) {
+      snap.forEach(child => {
+        const d = child.val();
+        d.id = child.key;
+        turnosCache[child.key] = d;
+      });
+    }
+    recalcularBloqueActivo();
+    verificarCancelacionAutomatica();
+    renderBloques();
+    if (modalOverlay.classList.contains('active')) {
+      renderizarTabla();
+    }
+  });
+}
+
+function recalcularBloqueActivo(){
+  const confirmados = Object.values(turnosCache).filter(t => t.estado === "confirmado");
+  if (confirmados.length === 0) {
+    bloqueActivo = null;
+    bloqueArranqueMs = null;
+    pausaAcumuladaMs = 0;
+    bloqueActivoTerminado = false;
+    return;
+  }
+
+  confirmados.sort((a,b) => (a.fechaConfirmadoMs || 0) - (b.fechaConfirmadoMs || 0));
+  const masReciente = confirmados[confirmados.length - 1];
+  const bloque = Math.ceil(masReciente.numero / config.tamanoBloque);
+
+  if (bloque !== bloqueActivo) {
+    bloqueActivo = bloque;
+    bloqueArranqueMs = masReciente.fechaConfirmadoMs || Date.now();
+    pausaAcumuladaMs = 0;
+    pausaInicioMs = null;
+    bloqueActivoTerminado = false;
+  }
+}
+
+/* =========================================================
+   CANCELACIÓN AUTOMÁTICA
+   ========================================================= */
+
+async function verificarCancelacionAutomatica(){
+  if (bloqueActivo === null) return;
+  if (bloqueActivo <= 1) return;
+
+  const bloqueAnterior = bloqueActivo - 1;
+  if (cancelacionHechaPorBloque[bloqueAnterior]) return;
+
+  const tam = config.tamanoBloque;
+  const primerTurnoBloque = (bloqueActivo - 1) * tam + 1;
+
+  const confirmadoPrimero = Object.values(turnosCache).find(
+    t => t.numero === primerTurnoBloque && t.estado === "confirmado"
+  );
+
+  if (!confirmadoPrimero) return;
+
+  const pendientesAnteriores = Object.values(turnosCache).filter(t => {
+    const b = Math.ceil(t.numero / tam);
+    return b === bloqueAnterior && t.estado === "pendiente";
+  });
+
+  cancelacionHechaPorBloque[bloqueAnterior] = true;
+
+  if (pendientesAnteriores.length === 0) return;
+
+  for (const t of pendientesAnteriores) {
+    try {
+      await update(ref(db, `${ROOT}/turnos/${t.id}`), {
+        estado: "cancelado",
+        fechaCancelacion: new Date().toLocaleString(),
+        motivoCancelacion: "No escaneado a tiempo"
+      });
+    } catch (e) {
+      console.error("Error cancelando turno", t.id, e);
+    }
+  }
+}
+
+/* =========================================================
+   MARCAR TURNOS CONCLUIDOS
+   ========================================================= */
+
+async function marcarTurnosConcluidos(){
+  if (config.pausado) return;
+
+  const confirmados = Object.values(turnosCache).filter(t => t.estado === "confirmado");
+
+  for (const t of confirmados) {
+    const segs = calcularSegundosRestantesTurno(t);
+    if (segs <= 0 && !concluidosProcesados.has(t.id)) {
+      concluidosProcesados.add(t.id);
+      try {
+        await update(ref(db, `${ROOT}/turnos/${t.id}`), {
+          estado: "concluido",
+          fechaConcluido: new Date().toLocaleString(),
+          fechaConcluidoMs: Date.now()
+        });
+      } catch (e) {
+        console.error("Error marcando turno como concluido", t.id, e);
+        concluidosProcesados.delete(t.id);
+      }
+    }
+  }
+}
+
+/* =========================================================
+   RENDER BLOQUES
+   ========================================================= */
+
+function renderBloques(){
+  const tam = config.tamanoBloque;
+  const todos = Object.values(turnosCache);
+
+  // EN TURNO
+  const confirmadosActivos = todos
+    .filter(t => {
+      if (t.estado !== "confirmado") return false;
+      return calcularSegundosRestantesTurno(t) > 0;
+    })
+    .sort((a,b) => a.numero - b.numero);
+
+  const idsActualesEnTurno = Object.keys(nodosEnTurno);
+  const idsNuevosEnTurno = confirmadosActivos.map(t => t.id);
+  const mismosEnTurno =
+    idsActualesEnTurno.length === idsNuevosEnTurno.length &&
+    idsActualesEnTurno.every((id, i) => id === idsNuevosEnTurno[i]);
+
+  if (!mismosEnTurno) {
+    panelTurno.innerHTML = "";
+    nodosEnTurno = {};
+
+    if (confirmadosActivos.length === 0) {
+      panelTurno.innerHTML = `
+        <div class="vacio">
+          <div class="icono">⏳</div>
+          <div class="texto">Sin turnos en curso</div>
+        </div>`;
+      indicadorTurno.textContent = "En espera";
+    } else {
+      const cuad = document.createElement("div");
+      cuad.className = "cuadricula";
+
+      confirmadosActivos.forEach(t => {
+        const div = document.createElement("div");
+        div.className = "cuadro azul";
+
+        const num = document.createElement("div");
+        num.className = "num";
+        num.textContent = t.numero;
+
+        const sub = document.createElement("div");
+        sub.className = "sub";
+        sub.textContent = formatearMMSS(calcularSegundosRestantesTurno(t));
+
+        div.appendChild(num);
+        div.appendChild(sub);
+        cuad.appendChild(div);
+
+        nodosEnTurno[t.id] = { sub };
+      });
+
+      panelTurno.appendChild(cuad);
+      indicadorTurno.textContent = confirmadosActivos.length + " activo(s)";
+    }
+  }
+
+  // PREPÁRATE
+  const pendientes = todos.filter(t => t.estado === "pendiente")
+                          .sort((a,b) => a.numero - b.numero);
+
+  let siguienteBloque = null;
+
+  if (bloqueActivo !== null && !bloqueActivoTerminado) {
+    for (const t of pendientes) {
+      const b = Math.ceil(t.numero / tam);
+      if (b > bloqueActivo) {
+        siguienteBloque = b;
+        break;
+      }
+    }
+  } else {
+    if (pendientes.length > 0) {
+      siguienteBloque = Math.ceil(pendientes[0].numero / tam);
+    }
+  }
+
+  const pendientesBloque = siguienteBloque === null
+    ? []
+    : pendientes
+        .filter(t => Math.ceil(t.numero / tam) === siguienteBloque)
+        .sort((a,b) => a.numero - b.numero);
+
+  const idsActualesPrep = Object.keys(nodosPreparate);
+  const idsNuevosPrep = pendientesBloque.map(t => t.id);
+  const mismosPrep =
+    idsActualesPrep.length === idsNuevosPrep.length &&
+    idsActualesPrep.every((id, i) => id === idsNuevosPrep[i]);
+
+  if (!mismosPrep) {
+    panelPreparate.innerHTML = "";
+    nodosPreparate = {};
+
+    if (pendientesBloque.length === 0) {
+      panelPreparate.innerHTML = `
+        <div class="vacio">
+          <div class="icono">📋</div>
+          <div class="texto">Sin turnos pendientes</div>
+        </div>`;
+      indicadorPreparate.textContent = "Nada en espera";
+    } else {
+      const cuad = document.createElement("div");
+      cuad.className = "cuadricula";
+
+      pendientesBloque.forEach(t => {
+        const div = document.createElement("div");
+        div.className = "cuadro naranja";
+
+        const num = document.createElement("div");
+        num.className = "num";
+        num.textContent = t.numero;
+
+        const sub = document.createElement("div");
+        sub.className = "sub";
+        sub.textContent = "";
+
+        div.appendChild(num);
+        div.appendChild(sub);
+        cuad.appendChild(div);
+
+        nodosPreparate[t.id] = { sub };
+      });
+
+      panelPreparate.appendChild(cuad);
+      indicadorPreparate.textContent = "Bloque " + siguienteBloque;
+    }
+  }
+
+  actualizarTemporizadoresDOM();
+}
+
+/* =========================================================
+   ACTUALIZACIÓN LIGERA
+   ========================================================= */
+
+function actualizarTemporizadoresDOM(){
+  const tam = config.tamanoBloque;
+  const temporizadorBloqueSeg = calcularTemporizadorBloque();
+
+  let textoPausa = "Pausa temporal";
+  if (config.horaReanudacion) {
+    textoPausa = "Reanuda " + config.horaReanudacion;
+  }
+
+  // EN TURNO
+  Object.entries(nodosEnTurno).forEach(([id, nodo]) => {
+    const t = turnosCache[id];
+    if (!t) return;
+    const segs = calcularSegundosRestantesTurno(t);
+    const txt = formatearMMSS(segs);
+    if (nodo.sub.textContent !== txt) {
+      nodo.sub.textContent = txt;
+    }
+  });
+
+  // PREPÁRATE
+  Object.entries(nodosPreparate).forEach(([id, nodo]) => {
+    const t = turnosCache[id];
+    if (!t) return;
+
+    let textoSub = "";
+    if (config.pausado) {
+      textoSub = textoPausa;
+    } else if (bloqueActivo === null || bloqueActivoTerminado) {
+      textoSub = "Por iniciar";
+    } else {
+      const b = Math.ceil(t.numero / tam);
+      const bloquesEntre = b - bloqueActivo - 1;
+      const totalSeg = (bloquesEntre * config.duracionTurnoSeg) + temporizadorBloqueSeg;
+      textoSub = "≈ " + Math.ceil(totalSeg / 60) + " min";
+    }
+
+    if (nodo.sub.textContent !== textoSub) {
+      nodo.sub.textContent = textoSub;
+    }
+  });
+}
+
+/* =========================================================
+   TICK cada segundo
+   ========================================================= */
+
+function tick(){
+  actualizarTemporizadoresDOM();
+
+  // Verificar si algún confirmado ya venció → regenerar y marcar concluido
+  const idsEnTurno = Object.keys(nodosEnTurno);
+  const idsVigentes = idsEnTurno.filter(id => {
+    const t = turnosCache[id];
+    if (!t) return false;
+    if (t.estado !== "confirmado") return false;
+    return calcularSegundosRestantesTurno(t) > 0;
+  });
+
+  if (idsVigentes.length !== idsEnTurno.length) {
+    renderBloques();
+  }
+
+  marcarTurnosConcluidos();
+}
+
+/* =========================================================
+   MODAL TABLA
+   ========================================================= */
+
+function renderizarTabla(){
+  const turnos = Object.values(turnosCache).sort((a,b) => a.numero - b.numero);
+
+  if (turnos.length === 0) {
+    tablaBody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align:center; color:#999; padding:30px;">
+          No hay turnos registrados
+        </td>
+      </tr>`;
+    contadorResultados.textContent = "";
+    return;
+  }
+
+  const f = normalizar(filtroBusqueda);
+
+  const filtrados = f
+    ? turnos.filter(t => {
+        const campos = [
+          String(t.numero || ""),
+          String(t.empleado || ""),
+          String(t.nombreCompleto || ""),
+          String(t.estado || "")
+        ].map(normalizar).join(" | ");
+
+        return campos.includes(f);
+      })
+    : turnos;
+
+  if (filtrados.length === 0) {
+    tablaBody.innerHTML = `
+      <tr>
+        <td colspan="4" class="sin-resultados">
+          No se encontraron turnos con ese criterio.
+        </td>
+      </tr>`;
+    contadorResultados.textContent = "0 resultados de " + turnos.length;
+    return;
+  }
+
+  let html = "";
+  filtrados.forEach(t => {
+    let badge = "";
+    let filaClase = "";
+
+    if (t.estado === "pendiente") {
+      badge = '<span class="estado-badge estado-pendiente">Pendiente</span>';
+    } else if (t.estado === "confirmado") {
+      badge = '<span class="estado-badge estado-confirmado">Confirmado</span>';
+    } else if (t.estado === "concluido") {
+      badge = '<span class="estado-badge estado-concluido">Concluido</span>';
+      filaClase = "fila-concluida";
+    } else if (t.estado === "cancelado") {
+      badge = '<span class="estado-badge estado-cancelado">Cancelado</span>';
+      filaClase = "fila-cancelada";
+    }
+
+    html += `
+      <tr class="${filaClase}">
+        <td><strong>${t.numero}</strong></td>
+        <td>${t.empleado || '-'}</td>
+        <td>${t.nombreCompleto || '-'}</td>
+        <td>${badge}</td>
+      </tr>`;
+  });
+
+  tablaBody.innerHTML = html;
+
+  if (f) {
+    contadorResultados.textContent = filtrados.length + " resultado(s) de " + turnos.length;
+  } else {
+    contadorResultados.textContent = turnos.length + " turno(s) en total";
+  }
+}
+
+buscador.addEventListener("input", () => {
+  filtroBusqueda = buscador.value;
+  renderizarTabla();
+});
+
+/* =========================================================
+   CONTROLES
+   ========================================================= */
+
+function actualizarBotonesTamano(){
+  document.querySelectorAll(".btn-tamano").forEach(btn => {
+    const val = parseInt(btn.getAttribute("data-tam"));
+    btn.classList.toggle("activo", val === config.tamanoBloque);
+  });
+}
+
+document.querySelectorAll(".btn-tamano").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const nuevoTam = parseInt(btn.getAttribute("data-tam"));
+    try {
+      await set(ref(db, `${ROOT}/config/tamanoBloque`), nuevoTam);
+    } catch (e) {
+      console.error(e);
+      alert("No se pudo cambiar el tamaño del bloque");
+    }
+  });
+});
+
+function actualizarInputDuracion(){
+  const minutos = Math.max(1, Math.round(config.duracionTurnoSeg / 60));
+  if (parseInt(inputDuracion.value) !== minutos) {
+    inputDuracion.value = minutos;
+  }
+}
+
+inputDuracion.addEventListener("change", async () => {
+  let min = parseInt(inputDuracion.value);
+  if (isNaN(min) || min < 1) min = 1;
+  if (min > 120) min = 120;
+  inputDuracion.value = min;
+
+  try {
+    await set(ref(db, `${ROOT}/config/duracionTurnoSeg`), min * 60);
+  } catch (e) {
+    console.error(e);
+    alert("No se pudo cambiar la duración");
+  }
+});
+
+function actualizarBotonPausa(){
+  if (config.pausado) {
+    btnPausa.textContent = "▶ Reanudar tiempo";
+    btnPausa.classList.add("pausado");
+    bannerPausa.classList.add("activo");
+
+    if (config.horaReanudacion) {
+      bannerPausa.innerHTML = "⏸ SISTEMA EN PAUSA — Reanuda a las " + config.horaReanudacion;
+    } else {
+      bannerPausa.innerHTML = "⏸ SISTEMA EN PAUSA";
+    }
+  } else {
+    btnPausa.textContent = "⏸ Pausar tiempo";
+    btnPausa.classList.remove("pausado");
+    bannerPausa.classList.remove("activo");
+    bannerPausa.innerHTML = "⏸ SISTEMA EN PAUSA";
+  }
+}
+
+/* =========================================================
+   PAUSA
+   ========================================================= */
+
+btnPausa.addEventListener("click", () => {
+  if (config.pausado) {
+    reanudarTiempo();
+  } else {
+    inputHoraReanudacion.value = "";
+    modalPausaOverlay.classList.add("active");
+    setTimeout(() => inputHoraReanudacion.focus(), 100);
+  }
+});
+
+btnCancelarPausa.addEventListener("click", () => {
+  modalPausaOverlay.classList.remove("active");
+});
+
+btnConfirmarPausa.addEventListener("click", async () => {
+  const hora = inputHoraReanudacion.value.trim();
+
+  if (!hora) {
+    alert("Debes indicar la hora de reanudación para poder pausar.");
+    inputHoraReanudacion.focus();
+    return;
+  }
+
+  try {
+    await set(ref(db, `${ROOT}/config/pausado`), true);
+    await set(ref(db, `${ROOT}/config/horaReanudacion`), hora);
+    modalPausaOverlay.classList.remove("active");
+  } catch (e) {
+    console.error(e);
+    alert("No se pudo pausar el sistema");
+  }
+});
+
+async function reanudarTiempo(){
+  try {
+    await set(ref(db, `${ROOT}/config/pausado`), false);
+    await set(ref(db, `${ROOT}/config/horaReanudacion`), "");
+  } catch (e) {
+    console.error(e);
+    alert("No se pudo reanudar el sistema");
+  }
+}
+
+/* =========================================================
+   MODAL TURNOS
+   ========================================================= */
+
+function abrirModal(){
+  modalOverlay.classList.add('active');
+  filtroBusqueda = "";
+  buscador.value = "";
+  renderizarTabla();
+  setTimeout(() => buscador.focus(), 100);
+}
+function cerrarModal(){
+  modalOverlay.classList.remove('active');
+}
+
+abrirModalBtn.addEventListener('click', abrirModal);
+btnCerrarModal.addEventListener('click', cerrarModal);
+cerrarX.addEventListener('click', cerrarModal);
+
+modalOverlay.addEventListener('click', (e) => {
+  if (e.target === modalOverlay) cerrarModal();
+});
+
+modalPausaOverlay.addEventListener('click', (e) => {
+  if (e.target === modalPausaOverlay) {
+    modalPausaOverlay.classList.remove('active');
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (modalOverlay.classList.contains('active')) cerrarModal();
+    if (modalPausaOverlay.classList.contains('active')) {
+      modalPausaOverlay.classList.remove('active');
+    }
+  }
+});
+
+/* =========================================================
+   ARRANQUE
+   ========================================================= */
+
+(async function iniciar(){
+  await inicializarFirebase();
+  escucharConfig();
+  escucharTurnos();
+  setInterval(tick, 1000);
+})();
+
+</script>
+
+</body>
+</html>

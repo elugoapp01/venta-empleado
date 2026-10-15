@@ -1,0 +1,2853 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Cajero · Sistema Venta a Empleados</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #F0F2F5;
+            min-height: 100vh;
+        }
+
+        /* ==================== LOADER MINIMALISTA ==================== */
+        .loader-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(255,255,255,0.92);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 22px;
+            z-index: 99999;
+            backdrop-filter: blur(4px);
+        }
+        .loader-overlay.active { display: flex; }
+        .loader-overlay .loader-logo {
+            width: 90px;
+            height: 90px;
+            object-fit: contain;
+            animation: loaderPulse 1.2s ease-in-out infinite;
+        }
+        @keyframes loaderPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.12); opacity: 0.75; }
+        }
+        .loader-overlay .loader-texto {
+            color: #6C8196;
+            font-size: 0.9rem;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            text-align: center;
+            padding: 0 20px;
+        }
+        .loader-overlay .loader-progreso {
+            color: #0B2F5C;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+
+        /* ==================== LOGIN ==================== */
+        .modal-login {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+        .modal-login.hidden { display: none; }
+        .login-card {
+            background: white;
+            border-radius: 24px;
+            padding: 35px;
+            width: 90%;
+            max-width: 380px;
+            text-align: center;
+        }
+        .login-card img { width: 80px; margin-bottom: 20px; }
+        .login-card h2 { font-size: 1.3rem; margin-bottom: 20px; color: #0B2F5C; }
+        .login-card input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1.5px solid #E2E7ED;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            outline: none;
+            text-transform: uppercase;
+        }
+        .login-card input:focus { border-color: #C9A74D; }
+        .login-card button {
+            background: #0B2F5C;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 30px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .login-error { color: #C44536; font-size: 0.75rem; margin-top: 10px; }
+
+        /* ==================== HEADER ==================== */
+        .header {
+            background: #0B2F5C;
+            padding: 12px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .logo-area { display: flex; align-items: center; gap: 15px; }
+        .logo-img { width: 45px; height: 45px; object-fit: contain; border-radius: 10px; background: white; padding: 5px; }
+        .titulo-panel { color: white; font-size: 1.1rem; font-weight: 600; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .user-name {
+            background: rgba(255,255,255,0.15);
+            padding: 6px 15px;
+            border-radius: 30px;
+            color: white;
+            font-size: 0.85rem;
+        }
+        .btn-icon-header {
+            background: rgba(255,255,255,0.15);
+            border: none;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .btn-icon-header:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+        .btn-formatear-header {
+            background: #C44536;
+            border: none;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .btn-formatear-header:hover {
+            background: #a5372b;
+            transform: scale(1.05);
+        }
+        .btn-cerrar-header {
+            background: #C44536;
+            border: none;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .btn-cerrar-header:hover {
+            background: #a5372b;
+            transform: scale(1.05);
+        }
+
+        .main-content {
+            padding: 25px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* ==================== TOP BAR ==================== */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .buscar-venta {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            max-width: 280px;
+            flex: 1;
+        }
+        .buscar-venta input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1.5px solid #E2E7ED;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            outline: none;
+            min-width: 0;
+            text-transform: uppercase;
+        }
+        .buscar-venta input:focus { border-color: #C9A74D; }
+        .btn-buscar {
+            background: #0B2F5C;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-buscar:hover { background: #16486C; }
+
+        .pago-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .pago-botones {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .btn-pago-icono {
+            cursor: pointer;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .btn-pago-icono .icono-circle {
+            background: #F2F6FA;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            border: 2px solid #E2E7ED;
+            transition: 0.2s;
+        }
+        .btn-pago-icono.selected .icono-circle {
+            background: #0B2F5C;
+            border-color: #0B2F5C;
+            color: white;
+        }
+        .btn-pago-icono:hover .icono-circle {
+            transform: scale(1.05);
+            border-color: #C9A74D;
+        }
+        .btn-pago-icono span {
+            font-size: 0.6rem;
+            font-weight: 500;
+        }
+        .referencia-pago {
+            width: 160px;
+        }
+        .referencia-pago input {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 30px;
+            border: 1.5px solid #E2E7ED;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+        .btn-cobrar {
+            background: #C9A74D;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            transition: 0.2s;
+        }
+        .btn-cobrar.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .btn-cobrar:hover:not(.disabled) {
+            background: #dab85e;
+            transform: scale(1.02);
+        }
+
+        /* ==================== RESULTADO VENTA ==================== */
+        .resultado-venta {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: none;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .info-card {
+            background: #F2F6FA;
+            border-radius: 16px;
+            padding: 12px 15px;
+            text-align: center;
+        }
+        .info-card .label {
+            font-size: 0.7rem;
+            color: #6C8196;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .info-card .value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0B2F5C;
+            margin-top: 5px;
+        }
+        .total-card {
+            background: #E8F0FE;
+            border-radius: 16px;
+            padding: 12px 15px;
+            text-align: center;
+        }
+        .total-card .label {
+            font-size: 0.7rem;
+            color: #6C8196;
+            text-transform: uppercase;
+        }
+        .total-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1F6C4A;
+        }
+
+        .tabla-datos {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+        .tabla-datos th, .tabla-datos td {
+            padding: 10px 8px;
+            text-align: left;
+            border-bottom: 1px solid #E2E7ED;
+            vertical-align: middle;
+        }
+        .tabla-datos th {
+            background: #F2F6FA;
+            color: #0B2F5C;
+            font-weight: 600;
+        }
+        .miniatura-tabla {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 8px;
+            background: #E2E7ED;
+        }
+        .btn-oferta {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #C9A74D;
+            transition: 0.2s;
+        }
+        .btn-oferta:hover {
+            transform: scale(1.1);
+            color: #dab85e;
+        }
+
+        /* ==================== MODALES ==================== */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10001;
+            padding: 15px;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            padding: 25px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .modal-content h3 {
+            color: #0B2F5C;
+            margin-bottom: 15px;
+            border-left: 4px solid #C9A74D;
+            padding-left: 12px;
+        }
+        .resumen-corte {
+            background: #E8F0FE;
+            border-radius: 16px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .modal-buttons button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            border: none;
+        }
+        .btn-cerrar-modal {
+            background: #E2E7ED;
+        }
+
+        /* ==================== MODAL AJUSTE DE STOCK ==================== */
+        .modal-ajuste {
+            max-width: 560px;
+        }
+        .modal-ajuste .buscador-ajuste {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .modal-ajuste .buscador-ajuste input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1.5px solid #E2E7ED;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            outline: none;
+            text-transform: uppercase;
+        }
+        .modal-ajuste .buscador-ajuste input:focus { border-color: #C9A74D; }
+        .modal-ajuste .buscador-ajuste button {
+            background: #0B2F5C;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .modal-ajuste .buscador-ajuste button:hover { background: #16486C; }
+
+        .ajuste-resultados {
+            max-height: 220px;
+            overflow-y: auto;
+            border: 1.5px solid #E2E7ED;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .ajuste-resultados.active { display: block; }
+        .ajuste-resultado-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid #E2E7ED;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: 0.15s;
+        }
+        .ajuste-resultado-item:last-child { border-bottom: none; }
+        .ajuste-resultado-item:hover { background: #F2F6FA; }
+        .ajuste-resultado-item .foto {
+            width: 40px; height: 40px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #E2E7ED;
+            flex-shrink: 0;
+        }
+        .ajuste-resultado-item .info {
+            flex: 1;
+            min-width: 0;
+        }
+        .ajuste-resultado-item .info .id-sku {
+            font-weight: 700;
+            color: #C9A74D;
+            font-size: 0.8rem;
+        }
+        .ajuste-resultado-item .info .sku {
+            color: #0B2F5C;
+            font-weight: 600;
+            margin-left: 6px;
+            font-size: 0.75rem;
+        }
+        .ajuste-resultado-item .info .desc {
+            font-size: 0.75rem;
+            color: #4a627a;
+            margin-top: 2px;
+        }
+        .ajuste-resultado-item .info .stock {
+            font-size: 0.7rem;
+            color: #1F6C4A;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        .ajuste-card {
+            background: #F2F6FA;
+            border-radius: 16px;
+            padding: 15px;
+            display: none;
+            margin-bottom: 15px;
+        }
+        .ajuste-card.active { display: block; }
+        .ajuste-card .producto-info {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #E2E7ED;
+        }
+        .ajuste-card .producto-info img {
+            width: 60px; height: 60px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: #E2E7ED;
+        }
+        .ajuste-card .producto-info .datos {
+            flex: 1;
+            min-width: 0;
+        }
+        .ajuste-card .producto-info .nombre {
+            font-weight: 700;
+            color: #0B2F5C;
+            font-size: 0.9rem;
+        }
+        .ajuste-card .producto-info .ref {
+            font-size: 0.75rem;
+            color: #6C8196;
+            margin-top: 2px;
+        }
+        .ajuste-card .stock-actual {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .ajuste-card .stock-actual .celda {
+            background: white;
+            border-radius: 12px;
+            padding: 10px 8px;
+            text-align: center;
+        }
+        .ajuste-card .stock-actual .celda .lbl {
+            font-size: 0.65rem;
+            color: #6C8196;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .ajuste-card .stock-actual .celda .val {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #0B2F5C;
+            margin-top: 3px;
+        }
+        .ajuste-card .stock-actual .celda.disponible .val { color: #1F6C4A; }
+        .ajuste-card .stock-actual .celda.vendida .val { color: #C44536; }
+
+        .ajuste-campos label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #0B2F5C;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            margin-top: 12px;
+        }
+        .ajuste-campos input, .ajuste-campos select, .ajuste-campos textarea {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid #E2E7ED;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            outline: none;
+        }
+        .ajuste-campos input:focus, .ajuste-campos select:focus, .ajuste-campos textarea:focus {
+            border-color: #C9A74D;
+        }
+        .ajuste-campos textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .ajuste-preview {
+            background: #FFF8E7;
+            border-left: 4px solid #C9A74D;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            color: #6B4500;
+            display: none;
+        }
+        .ajuste-preview.active { display: block; }
+        .ajuste-preview .linea {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+        }
+        .ajuste-preview .linea strong {
+            color: #0B2F5C;
+        }
+
+        .btn-ajustar {
+            background: #1F6C4A;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: 0.2s;
+        }
+        .btn-ajustar:hover { background: #2a8e5c; }
+        .btn-ajustar:disabled {
+            background: #9CA3AF;
+            cursor: not-allowed;
+        }
+
+        /* ==================== MODAL ACTUALIZAR PRECIO ==================== */
+        .modal-precio-nuevo {
+            max-width: 560px;
+        }
+        .precio-buscador {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .precio-buscador input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1.5px solid #E2E7ED;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            outline: none;
+            text-transform: uppercase;
+        }
+        .precio-buscador input:focus { border-color: #C9A74D; }
+        .precio-buscador button {
+            background: #0B2F5C;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .precio-buscador button:hover { background: #16486C; }
+        .precio-resultados {
+            max-height: 220px;
+            overflow-y: auto;
+            border: 1.5px solid #E2E7ED;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .precio-resultados.active { display: block; }
+        .precio-resultado-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid #E2E7ED;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .precio-resultado-item:last-child { border-bottom: none; }
+        .precio-resultado-item:hover { background: #F2F6FA; }
+        .precio-resultado-item .foto {
+            width: 40px; height: 40px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #E2E7ED;
+            flex-shrink: 0;
+        }
+        .precio-resultado-item .info { flex: 1; min-width: 0; }
+        .precio-resultado-item .info .id-sku {
+            font-weight: 700;
+            color: #C9A74D;
+            font-size: 0.8rem;
+        }
+        .precio-resultado-item .info .sku {
+            color: #0B2F5C;
+            font-weight: 600;
+            margin-left: 6px;
+            font-size: 0.75rem;
+        }
+        .precio-resultado-item .info .desc {
+            font-size: 0.75rem;
+            color: #4a627a;
+            margin-top: 2px;
+        }
+        .precio-seleccionado {
+            background: #F2F6FA;
+            border-radius: 16px;
+            padding: 15px;
+            display: none;
+            margin-bottom: 15px;
+        }
+        .precio-seleccionado.active { display: block; }
+        .precio-seleccionado .id-producto {
+            font-weight: 700;
+            color: #C9A74D;
+            font-size: 0.95rem;
+        }
+        .precio-seleccionado .desc-producto {
+            font-size: 0.8rem;
+            color: #4a627a;
+            margin-top: 3px;
+        }
+        .precio-seleccionado .precio-actual-lbl {
+            font-size: 0.75rem;
+            color: #6C8196;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+        .precio-seleccionado .precio-actual-val {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1F6C4A;
+        }
+        .precio-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .precio-input-group input {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 14px;
+            border: 1.5px solid #E2E7ED;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            outline: none;
+            font-family: inherit;
+        }
+        .precio-input-group input:focus { border-color: #C9A74D; }
+        .precio-input-group button {
+            padding: 12px 22px;
+            background: #1F6C4A;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: 0.2s;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        .precio-input-group button:hover { background: #2a8e5c; }
+        .precio-mensaje {
+            margin-top: 12px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            display: none;
+            font-weight: 500;
+        }
+        .precio-mensaje.ok {
+            display: block;
+            background: #DCFCE7;
+            color: #1F6C4A;
+        }
+        .precio-mensaje.error {
+            display: block;
+            background: #FEE2E2;
+            color: #C44536;
+        }
+
+        /* ==================== MODAL USUARIOS ==================== */
+        .modal-usuarios {
+            max-width: 620px;
+        }
+        #tablaUsuariosModal {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+        #tablaUsuariosModal th, #tablaUsuariosModal td {
+            padding: 8px 6px;
+            text-align: left;
+            border-bottom: 1px solid #E2E7ED;
+        }
+        #tablaUsuariosModal th {
+            background: #F2F6FA;
+            color: #0B2F5C;
+            font-weight: 600;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+        }
+        .acciones-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px 8px;
+            font-size: 0.9rem;
+            border-radius: 6px;
+            transition: 0.15s;
+        }
+        .btn-editar-usuario { color: #C9A74D; }
+        .btn-editar-usuario:hover { background: #FFF8E7; }
+        .btn-eliminar-usuario { color: #C44536; }
+        .btn-eliminar-usuario:hover { background: #FEE2E2; }
+        .form-crear-usuario {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 2px solid #E2E7ED;
+        }
+        .form-crear-usuario h4 {
+            font-size: 0.95rem;
+            color: #0B2F5C;
+            margin-bottom: 10px;
+        }
+        .form-crear-usuario input,
+        .form-crear-usuario select {
+            width: 100%;
+            padding: 10px 12px;
+            margin: 4px 0;
+            border: 1.5px solid #E2E7ED;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            outline: none;
+            font-family: inherit;
+        }
+        .form-crear-usuario input:focus,
+        .form-crear-usuario select:focus { border-color: #C9A74D; }
+        .form-crear-usuario button {
+            background: #0B2F5C;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 30px;
+            margin-top: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .form-crear-usuario button:hover { background: #16486C; }
+
+        /* ==================== MODAL FOLIOS ==================== */
+        .modal-folios {
+            max-width: 480px;
+        }
+        .folios-actuales {
+            background: #E8F0FE;
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 18px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .folios-actuales .celda {
+            background: white;
+            border-radius: 12px;
+            padding: 10px 12px;
+            text-align: center;
+        }
+        .folios-actuales .celda .lbl {
+            font-size: 0.65rem;
+            color: #6C8196;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .folios-actuales .celda .val {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #0B2F5C;
+            margin-top: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .folio-form label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #0B2F5C;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            margin-top: 12px;
+        }
+        .folio-form input {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid #E2E7ED;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            outline: none;
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+        .folio-form input:focus { border-color: #C9A74D; }
+        .folio-error {
+            color: #C44536;
+            font-size: 0.75rem;
+            margin-top: 8px;
+            min-height: 1rem;
+            font-weight: 500;
+        }
+
+        /* ==================== MODAL FORMATEAR ==================== */
+        .modal-formatear {
+            max-width: 620px;
+        }
+        .alerta-peligro {
+            background: #FEE2E2;
+            border-left: 4px solid #C44536;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 18px;
+            color: #7F1D1D;
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .alerta-peligro i {
+            font-size: 1.5rem;
+        }
+        .formatear-acciones-top {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .formatear-acciones-top button {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 30px;
+            border: 1.5px solid #E2E7ED;
+            background: white;
+            color: #0B2F5C;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: inherit;
+            transition: 0.2s;
+        }
+        .formatear-acciones-top button:hover {
+            background: #F2F6FA;
+            border-color: #0B2F5C;
+        }
+
+        .coleccion-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            border: 1.5px solid #E2E7ED;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .coleccion-item:hover {
+            background: #F2F6FA;
+            border-color: #C9A74D;
+        }
+        .coleccion-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #C44536;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .coleccion-item .info { flex: 1; min-width: 0; }
+        .coleccion-item .info .nombre {
+            font-weight: 700;
+            color: #0B2F5C;
+            font-size: 0.85rem;
+        }
+        .coleccion-item .info .desc {
+            font-size: 0.7rem;
+            color: #6C8196;
+            margin-top: 2px;
+            line-height: 1.4;
+        }
+
+        .formatear-confirm-input {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 2px solid #E2E7ED;
+        }
+        .formatear-confirm-input label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #0B2F5C;
+            margin-bottom: 8px;
+        }
+        .formatear-confirm-input input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #E2E7ED;
+            border-radius: 12px;
+            font-size: 1rem;
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            outline: none;
+            font-family: 'Courier New', monospace;
+        }
+        .formatear-confirm-input input:focus { border-color: #C44536; }
+
+        .btn-formatear-confirm {
+            background: #C44536;
+            color: white;
+            border: none;
+            padding: 14px;
+            width: 100%;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            margin-top: 14px;
+            transition: 0.2s;
+        }
+        .btn-formatear-confirm:hover:not(:disabled) { background: #a5372b; }
+        .btn-formatear-confirm:disabled {
+            background: #9CA3AF;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 900px) {
+            .top-bar { flex-direction: column; align-items: stretch; }
+            .buscar-venta { max-width: 100%; }
+            .pago-actions { justify-content: space-between; }
+            .main-content { padding: 15px; }
+            .info-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 500px) {
+            .header { padding: 10px 12px; gap: 8px; }
+            .logo-img { width: 36px; height: 36px; }
+            .titulo-panel { font-size: 0.9rem; }
+            .user-name { font-size: 0.7rem; padding: 5px 10px; }
+            .btn-icon-header, .btn-cerrar-header, .btn-formatear-header { width: 32px; height: 32px; font-size: 0.85rem; }
+            .modal-content { padding: 18px; border-radius: 18px; }
+            .folios-actuales { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ==================== LOADER ==================== -->
+<div id="loaderOverlay" class="loader-overlay">
+    <img src="logo.png" class="loader-logo" alt="Cargando" onerror="this.style.display='none'">
+    <div class="loader-texto" id="loaderTexto">Procesando...</div>
+    <div class="loader-progreso" id="loaderProgreso" style="display: none;"></div>
+</div>
+
+<!-- ==================== LOGIN ==================== -->
+<div id="modalLogin" class="modal-login">
+    <div class="login-card">
+        <img src="logo.png" onerror="this.src='https://via.placeholder.com/80'">
+        <h2>INICIAR SESIÓN</h2>
+        <input type="text" id="loginUsuario" placeholder="USUARIO" autocomplete="off">
+        <input type="password" id="loginPassword" placeholder="CONTRASEÑA" autocomplete="off">
+        <div id="loginError" class="login-error"></div>
+        <button id="loginBtn">INGRESAR</button>
+    </div>
+</div>
+
+<!-- ==================== APP PRINCIPAL ==================== -->
+<div id="panelApp" style="display: none;">
+    <div class="header">
+        <div class="logo-area">
+            <img src="logo.png" class="logo-img" onerror="this.src='https://via.placeholder.com/45'">
+            <span class="titulo-panel">CAJERO</span>
+        </div>
+        <div class="user-info">
+            <span class="user-name" id="userNameDisplay"><i class="fas fa-user"></i> </span>
+            <button class="btn-icon-header" id="btnAjusteStock" title="AJUSTAR STOCK" style="display: none;"><i class="fas fa-sliders-h"></i></button>
+            <button class="btn-icon-header" id="btnUsuarios" title="ADMINISTRAR USUARIOS" style="display: none;"><i class="fas fa-users"></i></button>
+            <button class="btn-icon-header" id="btnFolios" title="ACTUALIZAR RANGO DE FOLIOS" style="display: none;"><i class="fas fa-ticket-alt"></i></button>
+            <button class="btn-formatear-header" id="btnFormatear" title="FORMATEAR DATOS" style="display: none;"><i class="fas fa-broom"></i></button>
+            <button class="btn-icon-header" id="btnCorte" title="CORTE CAJA"><i class="fas fa-calculator"></i></button>
+            <button class="btn-icon-header" id="btnInventario" title="INVENTARIO"><i class="fas fa-boxes"></i></button>
+            <button class="btn-icon-header" id="btnDescargar" title="DESCARGAR CÓDIGOS"><i class="fas fa-download"></i></button>
+            <button class="btn-cerrar-header" id="btnCerrarSesion" title="CERRAR SESIÓN"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="top-bar">
+            <div class="buscar-venta">
+                <input type="text" id="folioVenta" placeholder="FOLIO (V001)" autocomplete="off" oninput="this.value=this.value.toUpperCase()">
+                <button class="btn-buscar" onclick="buscarVenta()"><i class="fas fa-search"></i></button>
+            </div>
+            <div class="pago-actions" id="pagoActions" style="display: none;">
+                <div class="pago-botones">
+                    <div class="btn-pago-icono" data-tipo="efectivo">
+                        <div class="icono-circle"><i class="fas fa-money-bill"></i></div>
+                        <span>EFECTIVO</span>
+                    </div>
+                    <div class="btn-pago-icono" data-tipo="tarjeta">
+                        <div class="icono-circle"><i class="fas fa-credit-card"></i></div>
+                        <span>TARJETA</span>
+                    </div>
+                </div>
+                <div class="referencia-pago" id="referenciaDiv" style="display: none;">
+                    <input type="text" id="referenciaPago" placeholder="REFERENCIA" oninput="validarBotonCobrar()">
+                </div>
+                <input type="hidden" id="tipoPagoSeleccionado" value="">
+                <button class="btn-cobrar disabled" id="btnCobrar"><i class="fas fa-cash-register"></i> COBRAR</button>
+            </div>
+        </div>
+
+        <div id="resultadoVenta" class="resultado-venta"></div>
+    </div>
+</div>
+
+<!-- ==================== MODAL CORTE CAJA ==================== -->
+<div id="modalCorte" class="modal">
+    <div class="modal-content" id="modalCorteContent"></div>
+</div>
+
+<!-- ==================== MODAL INVENTARIO ==================== -->
+<div id="modalInventario" class="modal">
+    <div class="modal-content" style="max-width: 95%; width: auto;">
+        <h3><i class="fas fa-boxes"></i> INVENTARIO ACTUAL</h3>
+        <div style="overflow-x: auto; max-height: 60vh;">
+            <table class="tabla-datos" id="tablaInventarioModal">
+                <thead>
+                    <tr><th>FOTO</th><th>ID</th><th>SKU</th><th>DESCRIPCIÓN</th><th>UNIDAD</th><th>STOCK</th></tr>
+                </thead>
+                <tbody id="inventarioModalBody"></tbody>
+            </table>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-imprimir" onclick="imprimirInventario()" style="background:#0B2F5C; color:white;"><i class="fas fa-print"></i> IMPRIMIR</button>
+            <button class="btn-cerrar-modal" onclick="cerrarModalInventario()">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL OFERTA ==================== -->
+<div id="modalOfertaVenta" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <h3><i class="fas fa-tag"></i> APLICAR OFERTA</h3>
+        <p id="ofertaProductoNombre" style="margin-bottom: 10px; font-weight: 600;"></p>
+        <p><strong>PRECIO ACTUAL:</strong> <span id="precioActual">$0.00</span></p>
+        <input type="number" id="nuevoPrecio" step="0.01" placeholder="NUEVO PRECIO" style="width:100%; padding:12px; margin:15px 0; border:1.5px solid #E2E7ED; border-radius:12px;">
+        <div class="modal-buttons">
+            <button onclick="aplicarOferta()" style="background:#1F6C4A; color:white;">APLICAR</button>
+            <button onclick="cerrarModalOfertaVenta()" class="btn-cerrar-modal">CANCELAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL AJUSTE DE STOCK ==================== -->
+<div id="modalAjusteStock" class="modal">
+    <div class="modal-content modal-ajuste">
+        <h3><i class="fas fa-sliders-h"></i> AJUSTAR STOCK</h3>
+
+        <div class="buscador-ajuste">
+            <input type="text" id="ajusteBuscarInput" placeholder="BUSCAR POR ID, SKU O DESCRIPCIÓN..." autocomplete="off">
+            <button id="ajusteBuscarBtn"><i class="fas fa-search"></i></button>
+        </div>
+
+        <div id="ajusteResultados" class="ajuste-resultados"></div>
+
+        <div id="ajusteCard" class="ajuste-card">
+            <div class="producto-info">
+                <img id="ajusteFoto" src="https://via.placeholder.com/60" onerror="this.src='https://via.placeholder.com/60'">
+                <div class="datos">
+                    <div class="nombre" id="ajusteNombre">—</div>
+                    <div class="ref" id="ajusteRef">—</div>
+                </div>
+            </div>
+
+            <div class="stock-actual">
+                <div class="celda">
+                    <div class="lbl">Registrada</div>
+                    <div class="val" id="ajusteRegistrada">0</div>
+                </div>
+                <div class="celda disponible">
+                    <div class="lbl">Disponible</div>
+                    <div class="val" id="ajusteDisponible">0</div>
+                </div>
+                <div class="celda vendida">
+                    <div class="lbl">Vendida</div>
+                    <div class="val" id="ajusteVendida">0</div>
+                </div>
+            </div>
+
+            <div class="ajuste-campos">
+                <label>Nueva cantidad disponible (conteo físico) *</label>
+                <input type="number" id="ajusteNuevaCantidad" placeholder="Ej: 15" min="0" step="1">
+
+                <label>Motivo del ajuste *</label>
+                <select id="ajusteMotivo">
+                    <option value="">Seleccione un motivo...</option>
+                    <option value="conteo_fisico">Conteo físico</option>
+                    <option value="error_captura">Error de captura</option>
+                    <option value="merma">Merma / producto dañado</option>
+                    <option value="devolucion">Devolución</option>
+                    <option value="otro">Otro</option>
+                </select>
+
+                <label>Observaciones (opcional)</label>
+                <textarea id="ajusteObservaciones" placeholder="Detalles adicionales del ajuste..."></textarea>
+            </div>
+
+            <div id="ajustePreview" class="ajuste-preview"></div>
+
+            <button id="btnAjustarStock" class="btn-ajustar" disabled>
+                <i class="fas fa-check-circle"></i> APLICAR AJUSTE
+            </button>
+        </div>
+
+        <div class="modal-buttons" style="margin-top: 12px;">
+            <button class="btn-cerrar-modal" onclick="cerrarModalAjuste()">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL ACTUALIZAR PRECIO ==================== -->
+<div id="modalActualizarPrecio" class="modal">
+    <div class="modal-content modal-precio-nuevo">
+        <h3><i class="fas fa-tag"></i> ACTUALIZAR PRECIO</h3>
+
+        <div class="precio-buscador">
+            <input type="text" id="precioBuscarInput" placeholder="BUSCAR POR ID, SKU O DESCRIPCIÓN..." autocomplete="off">
+            <button id="precioBuscarBtn"><i class="fas fa-search"></i></button>
+        </div>
+
+        <div id="precioResultados" class="precio-resultados"></div>
+
+        <div id="precioSeleccionado" class="precio-seleccionado">
+            <div class="id-producto" id="precioIdMostrar">—</div>
+            <div class="desc-producto" id="precioDescMostrar">—</div>
+            <div class="precio-actual-lbl">Precio actual</div>
+            <div class="precio-actual-val" id="precioActualMostrar">$0.00</div>
+
+            <div class="precio-input-group">
+                <input type="number" id="precioNuevoValor" placeholder="NUEVO PRECIO" step="0.01" min="0">
+                <button id="precioActualizarBtn"><i class="fas fa-save"></i> ACTUALIZAR</button>
+            </div>
+
+            <div id="precioMensaje" class="precio-mensaje"></div>
+        </div>
+
+        <div class="modal-buttons" style="margin-top: 12px;">
+            <button class="btn-cerrar-modal" onclick="cerrarModalActualizarPrecio()">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL USUARIOS ==================== -->
+<div id="modalUsuarios" class="modal">
+    <div class="modal-content modal-usuarios">
+        <h3><i class="fas fa-users"></i> ADMINISTRAR USUARIOS</h3>
+
+        <div style="overflow-x:auto;">
+            <table id="tablaUsuariosModal">
+                <thead>
+                    <tr><th>USUARIO</th><th>ROL</th><th>ACCIONES</th></tr>
+                </thead>
+                <tbody id="usuariosModalBody"></tbody>
+            </table>
+        </div>
+
+        <div class="form-crear-usuario">
+            <h4>CREAR NUEVO USUARIO</h4>
+            <input type="text" id="nuevoUsuario" placeholder="USUARIO" style="text-transform:uppercase">
+            <select id="nuevoRol">
+                <option value="ADMIN">ADMIN</option>
+                <option value="GERENTE">GERENTE</option>
+                <option value="CAPTURISTA">CAPTURISTA</option>
+                <option value="VALIDADOR">VALIDADOR</option>
+            </select>
+            <input type="password" id="nuevaPassword" placeholder="CONTRASEÑA">
+            <button id="btnCrearUsuario">CREAR USUARIO</button>
+        </div>
+
+        <div class="modal-buttons" style="margin-top: 14px;">
+            <button class="btn-cerrar-modal" onclick="cerrarModalUsuarios()">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL FOLIOS ==================== -->
+<div id="modalFolios" class="modal">
+    <div class="modal-content modal-folios">
+        <h3><i class="fas fa-ticket-alt"></i> RANGO DE FOLIOS</h3>
+
+        <div class="folios-actuales" id="foliosActuales">
+            <div class="celda">
+                <div class="lbl">Inicio</div>
+                <div class="val" id="folioInicioActual">—</div>
+            </div>
+            <div class="celda">
+                <div class="lbl">Fin</div>
+                <div class="val" id="folioFinActual">—</div>
+            </div>
+            <div class="celda">
+                <div class="lbl">Siguiente</div>
+                <div class="val" id="folioSiguienteActual">—</div>
+            </div>
+            <div class="celda">
+                <div class="lbl">Disponibles</div>
+                <div class="val" id="foliosDisponiblesActual">—</div>
+            </div>
+        </div>
+
+        <div class="folio-form">
+            <label>Nuevo folio inicio</label>
+            <input type="number" id="nuevoFolioInicio" placeholder="Ej: 41001" min="1" step="1">
+
+            <label>Nuevo folio fin</label>
+            <input type="number" id="nuevoFolioFin" placeholder="Ej: 42000" min="1" step="1">
+
+            <div id="folioError" class="folio-error"></div>
+
+            <button id="btnActualizarFolios" class="btn-formatear-confirm" style="background:#1F6C4A; margin-top:18px;">
+                <i class="fas fa-save"></i> ACTUALIZAR RANGO
+            </button>
+        </div>
+
+        <div class="modal-buttons" style="margin-top: 12px;">
+            <button class="btn-cerrar-modal" onclick="cerrarModalFolios()">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL FORMATEAR ==================== -->
+<div id="modalFormatear" class="modal">
+    <div class="modal-content modal-formatear">
+        <h3 style="border-left-color:#C44536; color:#C44536;"><i class="fas fa-broom"></i> FORMATEAR DATOS</h3>
+
+        <div class="alerta-peligro">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+                <strong>ADVERTENCIA:</strong> Esta operación <u>BORRA PERMANENTEMENTE</u> los datos seleccionados.
+                No se puede deshacer. Asegúrate de haber respaldado la información que necesites.
+            </div>
+        </div>
+
+        <div class="formatear-acciones-top">
+            <button id="btnMarcarTodo">✓ Marcar todo</button>
+            <button id="btnDesmarcarTodo">✕ Desmarcar todo</button>
+        </div>
+
+        <div id="coleccionesLista">
+            <label class="coleccion-item" for="colVentas">
+                <input type="checkbox" id="colVentas" data-coleccion="ventas">
+                <div class="info">
+                    <div class="nombre">VENTAS</div>
+                    <div class="desc">Todas las ventas registradas (PAGADAS y PENDIENTES). Se perderán los folios y datos de cada venta.</div>
+                </div>
+            </label>
+
+            <label class="coleccion-item" for="colMovimientos">
+                <input type="checkbox" id="colMovimientos" data-coleccion="movimientos_inventario">
+                <div class="info">
+                    <div class="nombre">MOVIMIENTOS DE INVENTARIO</div>
+                    <div class="desc">Todo el histórico de entradas, salidas y ajustes de stock.</div>
+                </div>
+            </label>
+
+            <label class="coleccion-item" for="colCortes">
+                <input type="checkbox" id="colCortes" data-coleccion="cortes">
+                <div class="info">
+                    <div class="nombre">CORTES DE CAJA</div>
+                    <div class="desc">Todos los cortes registrados.</div>
+                </div>
+            </label>
+
+            <label class="coleccion-item" for="colArticulos">
+                <input type="checkbox" id="colArticulos" data-coleccion="articulos">
+                <div class="info">
+                    <div class="nombre">ARTÍCULOS</div>
+                    <div class="desc">Todo el catálogo de artículos registrados. Deberás volver a registrarlos.</div>
+                </div>
+            </label>
+
+            <label class="coleccion-item" for="colPrecios">
+                <input type="checkbox" id="colPrecios" data-coleccion="precios">
+                <div class="info">
+                    <div class="nombre">PRECIOS</div>
+                    <div class="desc">Todos los precios cargados. Deberás volver a cargarlos.</div>
+                </div>
+            </label>
+
+            <label class="coleccion-item" for="colTurnos">
+                <input type="checkbox" id="colTurnos" data-coleccion="turnosEvento">
+                <div class="info">
+                    <div class="nombre">TURNOS (Realtime Database)</div>
+                    <div class="desc">Borra TODO el nodo turnosEvento (config, contador y turnos). El sistema de turnos quedará en blanco.</div>
+                </div>
+            </label>
+
+            <label class="coleccion-item" for="colResetCantidades">
+                <input type="checkbox" id="colResetCantidades" data-coleccion="reset_cantidades">
+                <div class="info">
+                    <div class="nombre">RESETEAR CANTIDADES DE ARTÍCULOS</div>
+                    <div class="desc">Pone cantidad_disponible = cantidad_registrada y cantidad_vendida = 0 en TODOS los artículos. No borra los artículos, solo resetea sus cantidades.</div>
+                </div>
+            </label>
+        </div>
+
+        <div class="formatear-confirm-input">
+            <label>Para confirmar, escribe <strong>BORRAR</strong> en mayúsculas:</label>
+            <input type="text" id="formatearConfirmInput" placeholder="BORRAR" autocomplete="off">
+        </div>
+
+        <button id="btnEjecutarFormateo" class="btn-formatear-confirm" disabled>
+            <i class="fas fa-trash-alt"></i> EJECUTAR FORMATEO
+        </button>
+
+        <div class="modal-buttons" style="margin-top: 12px;">
+            <button class="btn-cerrar-modal" onclick="cerrarModalFormatear()">CANCELAR</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyA0wUh8AqTOT36ofTMVHdKSRqWZ1MMhHzY",
+        authDomain: "venta-empleado.firebaseapp.com",
+        databaseURL: "https://venta-empleado-default-rtdb.firebaseio.com",
+        projectId: "venta-empleado",
+        storageBucket: "venta-empleado.firebasestorage.app",
+        messagingSenderId: "655370302032",
+        appId: "1:655370302032:web:bc276acc7683a67b49d755"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const rtdb = firebase.database();
+
+    let usuarioActual = null;
+    let ventaActual = null;
+    let articulosCache = [];
+    let preciosCache = {};
+    let itemOfertaIndex = null;
+    let procesandoCorte = false;
+    let ajusteArticuloSeleccionado = null;
+    let precioArticuloSeleccionado = null;
+
+    function toUpper(str) { return str ? str.toString().toUpperCase().trim() : ""; }
+
+    // ==================== LOADER ====================
+    function showLoader(texto = "Procesando...", progreso = null) {
+        document.getElementById("loaderTexto").textContent = texto;
+        const progEl = document.getElementById("loaderProgreso");
+        if (progreso !== null) {
+            progEl.textContent = progreso;
+            progEl.style.display = "block";
+        } else {
+            progEl.style.display = "none";
+        }
+        document.getElementById("loaderOverlay").classList.add("active");
+    }
+    function hideLoader() {
+        document.getElementById("loaderOverlay").classList.remove("active");
+    }
+    function actualizarProgreso(texto, progreso) {
+        document.getElementById("loaderTexto").textContent = texto;
+        const progEl = document.getElementById("loaderProgreso");
+        progEl.textContent = progreso;
+        progEl.style.display = "block";
+    }
+
+    // ==================== LOGIN ====================
+    async function iniciarSesion() {
+        const usuarioInput = toUpper(document.getElementById("loginUsuario").value);
+        const pass = document.getElementById("loginPassword").value;
+        const errorDiv = document.getElementById("loginError");
+        if (!usuarioInput || !pass) { errorDiv.innerHTML = "COMPLETE CAMPOS"; return; }
+
+        showLoader("Iniciando sesión...");
+        try {
+            const doc = await db.collection("usuarios").doc(usuarioInput).get();
+            if (!doc.exists) { errorDiv.innerHTML = "USUARIO NO REGISTRADO"; hideLoader(); return; }
+            const data = doc.data();
+            if (data.password === pass) {
+                const rol = data.rol || "CAPTURISTA";
+                if (rol === "CAPTURISTA") {
+                    errorDiv.innerHTML = "ACCESO DENEGADO. CAPTURISTA NO PUEDE ENTRAR.";
+                    hideLoader();
+                    return;
+                }
+                usuarioActual = { nombre: data.nombre || usuarioInput, rol: rol };
+                localStorage.setItem("usuarioActual", JSON.stringify(usuarioActual));
+                document.getElementById("modalLogin").classList.add("hidden");
+                document.getElementById("panelApp").style.display = "block";
+                document.getElementById("userNameDisplay").innerHTML = `<i class="fas fa-user"></i> ${usuarioActual.nombre} | ${usuarioActual.rol}`;
+
+                // Permisos por rol
+                const esAdmin = usuarioActual.rol === "ADMIN";
+                const esAdminOGerente = usuarioActual.rol === "ADMIN" || usuarioActual.rol === "GERENTE";
+
+                if (esAdminOGerente) {
+                    document.getElementById("btnAjusteStock").style.display = "flex";
+                    document.getElementById("btnUsuarios").style.display = "flex";
+                    document.getElementById("btnFolios").style.display = "flex";
+                }
+                if (esAdmin) {
+                    document.getElementById("btnFormatear").style.display = "flex";
+                }
+
+                await cargarArticulos();
+                await cargarPrecios();
+
+                errorDiv.innerHTML = "";
+                document.getElementById("loginUsuario").value = "";
+                document.getElementById("loginPassword").value = "";
+            } else {
+                errorDiv.innerHTML = "CONTRASEÑA INCORRECTA";
+            }
+        } catch(e) {
+            errorDiv.innerHTML = "ERROR DE CONEXIÓN";
+        }
+        hideLoader();
+    }
+
+    function cerrarSesion() {
+        localStorage.removeItem("usuarioActual");
+        location.reload();
+    }
+
+    // ==================== CARGA DE DATOS ====================
+    async function cargarArticulos() {
+        const snapshot = await db.collection("articulos").get();
+        articulosCache = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            articulosCache.push({
+                id: toUpper(doc.id),
+                sku: toUpper(data.sku),
+                descripcion: toUpper(data.descripcion),
+                fotografia: data.fotografia,
+                cantidad_registrada: data.cantidad_registrada ?? data.cantidad ?? 0,
+                cantidad_disponible: data.cantidad_disponible ?? data.cantidad ?? 0,
+                cantidad_vendida: data.cantidad_vendida || 0,
+                unidad_venta: toUpper(data.unidad_venta || "PIEZA"),
+                almacen: toUpper(data.almacen || "")
+            });
+        });
+    }
+
+    async function cargarPrecios() {
+        const snapshot = await db.collection("precios").get();
+        preciosCache = {};
+        snapshot.forEach(doc => {
+            preciosCache[toUpper(doc.id)] = {
+                precio: doc.data().p_unitario,
+                descripcion_sistema: toUpper(doc.data().descripcion_sistema || "")
+            };
+        });
+    }
+
+    // ==================== BUSCAR VENTA ====================
+    window.buscarVenta = async function() {
+        const folio = toUpper(document.getElementById("folioVenta").value);
+        const div = document.getElementById("resultadoVenta");
+        const pagoActions = document.getElementById("pagoActions");
+        if (!folio) { div.style.display = "none"; pagoActions.style.display = "none"; return; }
+
+        showLoader("Buscando venta...");
+        try {
+            const doc = await db.collection("ventas").doc(folio).get();
+            if (!doc.exists) {
+                div.style.display = "block";
+                div.innerHTML = '<p style="color:#C44536; text-align:center;">❌ VENTA NO ENCONTRADA</p>';
+                pagoActions.style.display = "none";
+                hideLoader();
+                return;
+            }
+            ventaActual = { id: doc.id, ...doc.data() };
+
+            let itemsHtml = "";
+            if (ventaActual.items) {
+                ventaActual.items.forEach((item, idx) => {
+                    const articuloFoto = articulosCache.find(a => a.id === item.id)?.fotografia || "";
+                    itemsHtml += `<tr>
+                        <td>${articuloFoto ? `<img src="${articuloFoto}" class="miniatura-tabla" onerror="this.style.display='none'">` : '<div style="width:40px;height:40px;background:#E2E7ED;border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image"></i></div>'}</td>
+                        <td>${item.descripcionSistema || item.descripcion || ''}</td>
+                        <td>${item.cantidad}</td>
+                        <td>$${item.precio_unitario?.toFixed(2)}</td>
+                        <td>$${item.subtotal?.toFixed(2)}</td>
+                        <td><button class="btn-oferta" onclick="abrirModalOfertaVenta(${idx}, '${item.descripcionSistema || item.descripcion}', ${item.precio_unitario})"><i class="fas fa-tag"></i></button></td>
+                    </tr>`;
+                });
+            }
+
+            let estadoHtml = ventaActual.estado === "PAGADA"
+                ? '<span style="color:#1F6C4A;">✅ PAGADA</span>'
+                : '<span style="color:#B76E00;">⏳ PENDIENTE</span>';
+
+            div.innerHTML = `
+                <div class="info-grid">
+                    <div class="info-card"><div class="label">FOLIO</div><div class="value">${ventaActual.id_venta}</div></div>
+                    <div class="info-card"><div class="label">FECHA</div><div class="value">${ventaActual.fecha_venta || 'N/A'}</div></div>
+                    <div class="info-card"><div class="label">EMPLEADO</div><div class="value">${ventaActual.nombre_empleado || 'N/A'}</div></div>
+                    <div class="info-card"><div class="label">NÚMERO</div><div class="value">${ventaActual.empleado || 'N/A'}</div></div>
+                    <div class="total-card"><div class="label">TOTAL</div><div class="value">$${ventaActual.total?.toFixed(2) || '0.00'}</div></div>
+                    <div class="info-card"><div class="label">ESTADO</div><div class="value">${estadoHtml}</div></div>
+                </div>
+                <table class="tabla-datos">
+                    <thead>
+                        <tr>
+                            <th>FOTO</th>
+                            <th>PRODUCTO</th>
+                            <th>CANT</th>
+                            <th>PRECIO</th>
+                            <th>SUBTOTAL</th>
+                            <th>OFERTA</th>
+                        </tr>
+                    </thead>
+                    <tbody>${itemsHtml}</tbody>
+                </table>
+            `;
+            div.style.display = "block";
+
+            if (ventaActual.estado !== "PAGADA") {
+                pagoActions.style.display = "flex";
+                document.querySelectorAll('.btn-pago-icono').forEach(b => b.classList.remove('selected'));
+                document.getElementById("tipoPagoSeleccionado").value = "";
+                document.getElementById("referenciaDiv").style.display = "none";
+                document.getElementById("referenciaPago").value = "";
+                validarBotonCobrar();
+                document.querySelectorAll('.btn-pago-icono').forEach(btn => {
+                    btn.removeEventListener('click', pagoClickHandler);
+                    btn.addEventListener('click', pagoClickHandler);
+                });
+                document.getElementById("btnCobrar").removeEventListener('click', realizarCobro);
+                document.getElementById("btnCobrar").addEventListener('click', realizarCobro);
+            } else {
+                pagoActions.style.display = "none";
+            }
+        } catch(e) {
+            div.innerHTML = '<p style="color:#C44536;">ERROR</p>';
+            div.style.display = "block";
+            pagoActions.style.display = "none";
+        }
+        hideLoader();
+    };
+
+    function validarBotonCobrar() {
+        const btnCobrar = document.getElementById("btnCobrar");
+        const tipoPago = document.getElementById("tipoPagoSeleccionado")?.value;
+        const referencia = document.getElementById("referenciaPago")?.value.trim();
+        if (!tipoPago) { btnCobrar.classList.add("disabled"); return; }
+        if (tipoPago === "tarjeta" && !referencia) { btnCobrar.classList.add("disabled"); return; }
+        btnCobrar.classList.remove("disabled");
+    }
+
+    function pagoClickHandler(e) {
+        const btn = e.currentTarget;
+        document.querySelectorAll('.btn-pago-icono').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        const tipo = btn.dataset.tipo;
+        document.getElementById("tipoPagoSeleccionado").value = tipo;
+        const refDiv = document.getElementById("referenciaDiv");
+        if (tipo === "tarjeta") {
+            refDiv.style.display = "block";
+        } else {
+            refDiv.style.display = "none";
+            document.getElementById("referenciaPago").value = "";
+        }
+        validarBotonCobrar();
+    }
+
+    async function realizarCobro() {
+        if (!ventaActual) return;
+        const tipoPago = document.getElementById("tipoPagoSeleccionado")?.value;
+        if (!tipoPago) { alert("SELECCIONE TIPO DE PAGO"); return; }
+        const referencia = document.getElementById("referenciaPago")?.value || "";
+        if (tipoPago === "tarjeta" && !referencia) { alert("INGRESE REFERENCIA DE TARJETA"); return; }
+
+        const ahoraCDMX = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+
+        showLoader("Registrando cobro...");
+        try {
+            await db.collection("ventas").doc(ventaActual.id).update({
+                estado: "PAGADA",
+                fecha_cobro: ahoraCDMX,
+                usuario_que_cobra: usuarioActual.nombre,
+                tipo_pago: tipoPago,
+                referencia_pago: referencia,
+                cortado: false
+            });
+            hideLoader();
+            alert(`✅ COBRO REALIZADO\nFOLIO: ${ventaActual.id_venta}\nTOTAL: $${ventaActual.total?.toFixed(2)}\nFECHA: ${ahoraCDMX}`);
+            document.getElementById("folioVenta").value = "";
+            document.getElementById("resultadoVenta").style.display = "none";
+            ventaActual = null;
+            document.getElementById("pagoActions").style.display = "none";
+        } catch(e) {
+            hideLoader();
+            alert("ERROR: " + e.message);
+        }
+    }
+
+    // ==================== OFERTA ====================
+    window.abrirModalOfertaVenta = function(index, nombre, precioActual) {
+        itemOfertaIndex = index;
+        document.getElementById("ofertaProductoNombre").innerHTML = nombre;
+        document.getElementById("precioActual").innerHTML = `$${precioActual.toFixed(2)}`;
+        document.getElementById("nuevoPrecio").value = "";
+        document.getElementById("modalOfertaVenta").classList.add("active");
+    };
+
+    window.aplicarOferta = async function() {
+        if (itemOfertaIndex === null || !ventaActual) return;
+        const nuevoPrecio = parseFloat(document.getElementById("nuevoPrecio").value);
+        if (isNaN(nuevoPrecio) || nuevoPrecio <= 0) {
+            alert("INGRESE UN PRECIO VÁLIDO");
+            return;
+        }
+        const item = ventaActual.items[itemOfertaIndex];
+        const cantidad = item.cantidad;
+        item.precio_unitario = nuevoPrecio;
+        item.subtotal = cantidad * nuevoPrecio;
+        let nuevoTotal = 0;
+        ventaActual.items.forEach(i => { nuevoTotal += i.subtotal; });
+        ventaActual.total = nuevoTotal;
+
+        showLoader("Aplicando oferta...");
+        try {
+            await db.collection("ventas").doc(ventaActual.id).update({
+                items: ventaActual.items,
+                total: nuevoTotal
+            });
+            hideLoader();
+            alert(`✅ OFERTA APLICADA\nNUEVO PRECIO: $${nuevoPrecio.toFixed(2)}`);
+            cerrarModalOfertaVenta();
+            buscarVenta();
+        } catch(e) {
+            hideLoader();
+            alert("ERROR: " + e.message);
+        }
+    };
+
+    window.cerrarModalOfertaVenta = function() {
+        document.getElementById("modalOfertaVenta").classList.remove("active");
+        itemOfertaIndex = null;
+    };
+
+    // ==================== CORTE CAJA ====================
+    async function cargarVentasNoCortadas() {
+        const snapshot = await db.collection("ventas").where("estado", "==", "PAGADA").get();
+        let ventas = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.cortado !== true) {
+                ventas.push({ id: doc.id, ...data });
+            }
+        });
+        return ventas;
+    }
+
+    window.abrirModalCorte = async function() {
+        showLoader("Cargando corte...");
+        const ventasNoCortadas = await cargarVentasNoCortadas();
+        hideLoader();
+
+        let totalEfectivo = 0, totalTarjeta = 0, totalGeneral = 0;
+        ventasNoCortadas.forEach(v => {
+            totalGeneral += v.total || 0;
+            if (v.tipo_pago === "efectivo") totalEfectivo += v.total || 0;
+            else if (v.tipo_pago === "tarjeta") totalTarjeta += v.total || 0;
+        });
+
+        let ventasHtml = "";
+        if (ventasNoCortadas.length > 0) {
+            ventasHtml = `
+                <div style="margin-top: 20px;">
+                    <p style="font-weight: 600; margin-bottom: 10px;"><i class="fas fa-receipt"></i> VENTAS POR CORTAR</p>
+                    <div style="max-height: 250px; overflow-y: auto; border: 1px solid #E2E7ED; border-radius: 12px;">
+                        <table style="width:100%; border-collapse: collapse; font-size: 0.7rem;">
+                            <thead style="background:#F2F6FA; position: sticky; top:0;">
+                                <tr><th style="padding:8px;">FOLIO</th><th>FECHA COBRO</th><th>TOTAL</th><th>PAGO</th></tr>
+                            </thead>
+                            <tbody>
+                                ${ventasNoCortadas.map(v => `
+                                    <tr>
+                                        <td style="padding:6px;">${v.id_venta}</td>
+                                        <td style="padding:6px;">${v.fecha_cobro || ''}</td>
+                                        <td style="padding:6px;">$${v.total?.toFixed(2)}</td>
+                                        <td style="padding:6px;">${v.tipo_pago === 'efectivo' ? '💵 EFECTIVO' : '💳 TARJETA'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        } else {
+            ventasHtml = `<div style="margin-top: 20px; text-align:center; color:#6C8196;">NO HAY VENTAS PENDIENTES DE CORTE</div>`;
+        }
+
+        const html = `
+            <div style="text-align: center; margin-bottom: 15px;">
+                <i class="fas fa-calculator" style="font-size: 2.5rem; color: #C9A74D;"></i>
+                <h3 style="color: #0B2F5C; margin-top: 5px;">ARQUEO DE CAJA</h3>
+                <p style="font-size:0.8rem; color:#6C8196;">Ventas cobradas pendientes de corte</p>
+            </div>
+            <div class="resumen-corte">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 15px;">
+                    <div style="text-align:center;">
+                        <p style="font-size:0.7rem; color:#6C8196;">TOTAL GENERAL</p>
+                        <p style="font-size:1.6rem; font-weight:700; color:#1F6C4A;">$${totalGeneral.toFixed(2)}</p>
+                    </div>
+                    <div style="text-align:center;">
+                        <p style="font-size:0.7rem; color:#6C8196;">EFECTIVO</p>
+                        <p style="font-size:1.2rem; font-weight:700; color:#0B2F5C;">$${totalEfectivo.toFixed(2)}</p>
+                    </div>
+                    <div style="text-align:center;">
+                        <p style="font-size:0.7rem; color:#6C8196;">TARJETA</p>
+                        <p style="font-size:1.2rem; font-weight:700; color:#0B2F5C;">$${totalTarjeta.toFixed(2)}</p>
+                    </div>
+                    <div style="text-align:center;">
+                        <p style="font-size:0.7rem; color:#6C8196;">VENTAS</p>
+                        <p style="font-size:1.2rem; font-weight:700; color:#0B2F5C;">${ventasNoCortadas.length}</p>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <label style="font-size:0.8rem; font-weight:600;">💰 ARQUEO FÍSICO (EFECTIVO EN CAJA)</label>
+                <input type="number" id="arqueoFisico" step="0.01" placeholder="EJ: 1500.00" style="width:100%; padding:10px; margin-top:5px; border:1.5px solid #E2E7ED; border-radius:10px;">
+            </div>
+            ${ventasHtml}
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button id="btnConfirmarCorte" style="background:#1F6C4A; color:white;"><i class="fas fa-check-circle"></i> CONFIRMAR CORTE</button>
+                <button class="btn-cerrar-modal" onclick="cerrarModalCorte()">CERRAR</button>
+            </div>
+        `;
+        document.getElementById("modalCorteContent").innerHTML = html;
+        document.getElementById("modalCorte").classList.add("active");
+
+        document.getElementById("btnConfirmarCorte").addEventListener("click", confirmarCorte);
+    };
+
+    window.confirmarCorte = async function(event) {
+        if (procesandoCorte) {
+            alert("⚠️ YA SE ESTÁ PROCESANDO UN CORTE, ESPERA UN MOMENTO");
+            return;
+        }
+
+        procesandoCorte = true;
+        const btn = document.getElementById("btnConfirmarCorte");
+        const textoOriginal = btn.innerHTML;
+
+        try {
+            const ventasNoCortadas = await cargarVentasNoCortadas();
+            if (ventasNoCortadas.length === 0) {
+                alert("NO HAY VENTAS PENDIENTES DE CORTE");
+                procesandoCorte = false;
+                return;
+            }
+
+            const arqueoFisico = parseFloat(document.getElementById("arqueoFisico").value);
+            if (isNaN(arqueoFisico)) {
+                alert("INGRESE EL ARQUEO FÍSICO (EFECTIVO EN CAJA)");
+                procesandoCorte = false;
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> PROCESANDO...';
+            showLoader("Procesando corte...");
+
+            let totalEfectivo = 0;
+            for (let v of ventasNoCortadas) {
+                if (v.tipo_pago === "efectivo") totalEfectivo += v.total;
+            }
+
+            const diferencia = arqueoFisico - totalEfectivo;
+            const fechaCorte = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+            const idCorte = "CORTE_" + new Date().toISOString().slice(0,19).replace(/[-:T]/g, '') + "_" + Math.random().toString(36).substr(2, 4);
+
+            const ultimoCorteSnapshot = await db.collection("cortes")
+                .where("fecha_corte", "==", fechaCorte)
+                .where("usuario", "==", usuarioActual.nombre)
+                .limit(1)
+                .get();
+
+            if (!ultimoCorteSnapshot.empty) {
+                alert("⚠️ YA EXISTE UN CORTE REGISTRADO EN ESTE MOMENTO.");
+                hideLoader();
+                procesandoCorte = false;
+                btn.disabled = false;
+                btn.innerHTML = textoOriginal;
+                return;
+            }
+
+            await db.collection("cortes").doc(idCorte).set({
+                id_corte: idCorte,
+                fecha_corte: fechaCorte,
+                usuario: usuarioActual.nombre,
+                total_efectivo: totalEfectivo,
+                total_tarjeta: ventasNoCortadas.reduce((sum, v) => sum + (v.tipo_pago === "tarjeta" ? v.total : 0), 0),
+                total_general: ventasNoCortadas.reduce((sum, v) => sum + v.total, 0),
+                arqueo_fisico: arqueoFisico,
+                diferencia: diferencia,
+                ventas_incluidas: ventasNoCortadas.map(v => v.id_venta)
+            });
+
+            const batch = db.batch();
+            ventasNoCortadas.forEach(v => {
+                const ref = db.collection("ventas").doc(v.id_venta);
+                batch.update(ref, { cortado: true });
+            });
+            await batch.commit();
+
+            hideLoader();
+            alert(`✅ CORTE REALIZADO\n📊 TOTAL SISTEMA: $${totalEfectivo.toFixed(2)}\n💰 ARQUEO FÍSICO: $${arqueoFisico.toFixed(2)}\n📉 DIFERENCIA: ${diferencia >= 0 ? `+$${diferencia.toFixed(2)}` : `-$${Math.abs(diferencia).toFixed(2)}`}`);
+            cerrarModalCorte();
+        } catch(e) {
+            hideLoader();
+            console.error("Error en corte:", e);
+            alert("ERROR AL REALIZAR EL CORTE: " + e.message);
+        } finally {
+            procesandoCorte = false;
+            btn.disabled = false;
+            btn.innerHTML = textoOriginal;
+        }
+    };
+
+    window.cerrarModalCorte = function() {
+        document.getElementById("modalCorte").classList.remove("active");
+    };
+
+    // ==================== INVENTARIO ====================
+    async function calcularStockVendido(idArticulo, unidadVenta) {
+        const snapshot = await db.collection("ventas").where("estado", "==", "PAGADA").get();
+        let vendido = 0;
+        snapshot.forEach(doc => {
+            const venta = doc.data();
+            if (venta.items) {
+                venta.items.forEach(item => {
+                    if (item.id === idArticulo && item.unidad_venta === unidadVenta) vendido += item.cantidad;
+                });
+            }
+        });
+        return vendido;
+    }
+
+    window.abrirModalInventario = async function() {
+        const tbody = document.getElementById("inventarioModalBody");
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">CARGANDO...</td></tr>';
+        document.getElementById("modalInventario").classList.add("active");
+
+        showLoader("Cargando inventario...");
+        let html = "";
+        for (const art of articulosCache) {
+            const stock = art.cantidad_disponible;
+            if (stock > 0) {
+                const precioData = preciosCache[art.id];
+                const descSistema = precioData?.descripcion_sistema || "";
+                html += `<tr>
+                    <td>${art.fotografia ? `<img src="${art.fotografia}" class="miniatura-tabla" onerror="this.style.display='none'">` : '<div style="width:40px;height:40px;background:#E2E7ED;border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image"></i></div>'}</td>
+                    <td>${art.id}</td>
+                    <td>${art.sku}</td>
+                    <td>${descSistema || art.descripcion || ''}</td>
+                    <td>${art.unidad_venta}</td>
+                    <td style="font-weight:700; color:#1F6C4A;">${stock}</td>
+                </tr>`;
+            }
+        }
+        if (html === "") html = '<tr><td colspan="6" style="text-align:center;">NO HAY PRODUCTOS CON STOCK DISPONIBLE</td></tr>';
+        tbody.innerHTML = html;
+        hideLoader();
+    };
+
+    window.imprimirInventario = function() {
+        const tabla = document.getElementById("tablaInventarioModal").cloneNode(true);
+        const ventana = window.open('', '_blank');
+        ventana.document.write(`
+            <html><head><title>INVENTARIO</title>
+            <style>body{font-family:Arial;padding:20px;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ccc;padding:8px;text-align:left;} img{max-width:50px;max-height:50px;}</style>
+            </head><body><h2>INVENTARIO ACTUAL</h2><p>Fecha: ${new Date().toLocaleString()}</p>${tabla.outerHTML}</body></html>
+        `);
+        ventana.document.close();
+        ventana.print();
+    };
+
+    window.cerrarModalInventario = function() {
+        document.getElementById("modalInventario").classList.remove("active");
+    };
+
+    // ==================== DESCARGAR CÓDIGOS ====================
+    window.exportarCodigos = async function() {
+        showLoader("Generando Excel...");
+        const data = [["ID","SKU","DESCRIPCIÓN ARTÍCULO","DESCRIPCIÓN SISTEMA","UNIDAD","ALMACÉN","PRECIO","CANTIDAD REGISTRADA","CANTIDAD VENDIDA","DIFERENCIA"]];
+        for (const art of articulosCache) {
+            const precioData = preciosCache[art.id];
+            const stock = art.cantidad_disponible;
+            data.push([art.id, art.sku, art.descripcion || "", precioData?.descripcion_sistema || "", art.unidad_venta, art.almacen, precioData?.precio || 0, art.cantidad_registrada, art.cantidad_vendida, stock]);
+        }
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "CODIGOS");
+        XLSX.writeFile(wb, `codigos_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.xlsx`);
+        hideLoader();
+    };
+
+    // ==================== AJUSTE DE STOCK ====================
+    window.abrirModalAjuste = function() {
+        document.getElementById("ajusteBuscarInput").value = "";
+        document.getElementById("ajusteResultados").innerHTML = "";
+        document.getElementById("ajusteResultados").classList.remove("active");
+        document.getElementById("ajusteCard").classList.remove("active");
+        document.getElementById("ajusteNuevaCantidad").value = "";
+        document.getElementById("ajusteMotivo").value = "";
+        document.getElementById("ajusteObservaciones").value = "";
+        document.getElementById("ajustePreview").classList.remove("active");
+        document.getElementById("ajustePreview").innerHTML = "";
+        document.getElementById("btnAjustarStock").disabled = true;
+        ajusteArticuloSeleccionado = null;
+
+        document.getElementById("modalAjusteStock").classList.add("active");
+        setTimeout(() => document.getElementById("ajusteBuscarInput").focus(), 100);
+    };
+
+    window.cerrarModalAjuste = function() {
+        document.getElementById("modalAjusteStock").classList.remove("active");
+    };
+
+    function buscarArticuloAjuste() {
+        const termino = toUpper(document.getElementById("ajusteBuscarInput").value);
+        const div = document.getElementById("ajusteResultados");
+
+        if (!termino) {
+            div.classList.remove("active");
+            div.innerHTML = "";
+            return;
+        }
+
+        const resultados = articulosCache.filter(art => {
+            const precioData = preciosCache[art.id];
+            return art.id.includes(termino)
+                || art.sku.includes(termino)
+                || art.descripcion.includes(termino)
+                || (precioData?.descripcion_sistema || "").includes(termino);
+        });
+
+        if (resultados.length === 0) {
+            div.innerHTML = '<div style="padding:15px; text-align:center; color:#6C8196; font-size:0.8rem;">NO SE ENCONTRARON PRODUCTOS</div>';
+            div.classList.add("active");
+            return;
+        }
+
+        div.innerHTML = resultados.map(art => {
+            const precioData = preciosCache[art.id];
+            const descSistema = precioData?.descripcion_sistema || "";
+            const foto = art.fotografia
+                ? `<img src="${art.fotografia}" class="foto" onerror="this.style.display='none'">`
+                : '<div class="foto" style="display:flex;align-items:center;justify-content:center;"><i class="fas fa-image" style="color:#9CA3AF;"></i></div>';
+            return `<div class="ajuste-resultado-item" data-id="${art.id}">
+                ${foto}
+                <div class="info">
+                    <div><span class="id-sku">${art.id}</span><span class="sku">${art.sku}</span></div>
+                    <div class="desc">${descSistema || art.descripcion || ''}</div>
+                    <div class="stock">Disponible: ${art.cantidad_disponible} · ${art.unidad_venta}</div>
+                </div>
+            </div>`;
+        }).join('');
+        div.classList.add("active");
+
+        div.querySelectorAll(".ajuste-resultado-item").forEach(el => {
+            el.addEventListener("click", () => seleccionarArticuloAjuste(el.dataset.id));
+        });
+    }
+
+    function seleccionarArticuloAjuste(id) {
+        const art = articulosCache.find(a => a.id === id);
+        if (!art) return;
+
+        ajusteArticuloSeleccionado = art;
+        const precioData = preciosCache[id];
+
+        document.getElementById("ajusteResultados").classList.remove("active");
+        document.getElementById("ajusteResultados").innerHTML = "";
+        document.getElementById("ajusteBuscarInput").value = "";
+
+        const fotoEl = document.getElementById("ajusteFoto");
+        fotoEl.src = art.fotografia || "https://via.placeholder.com/60?text=Sin+Foto";
+
+        document.getElementById("ajusteNombre").textContent = `${art.id} · ${art.sku}`;
+        document.getElementById("ajusteRef").textContent = precioData?.descripcion_sistema || art.descripcion || "SIN DESCRIPCIÓN";
+        document.getElementById("ajusteRegistrada").textContent = art.cantidad_registrada;
+        document.getElementById("ajusteDisponible").textContent = art.cantidad_disponible;
+        document.getElementById("ajusteVendida").textContent = art.cantidad_vendida;
+
+        document.getElementById("ajusteNuevaCantidad").value = "";
+        document.getElementById("ajusteMotivo").value = "";
+        document.getElementById("ajusteObservaciones").value = "";
+        document.getElementById("ajustePreview").classList.remove("active");
+        document.getElementById("btnAjustarStock").disabled = true;
+
+        document.getElementById("ajusteCard").classList.add("active");
+        setTimeout(() => document.getElementById("ajusteNuevaCantidad").focus(), 100);
+    }
+
+    function actualizarPreviewAjuste() {
+        if (!ajusteArticuloSeleccionado) return;
+
+        const nuevaCantidad = parseInt(document.getElementById("ajusteNuevaCantidad").value);
+        const motivo = document.getElementById("ajusteMotivo").value;
+        const previewDiv = document.getElementById("ajustePreview");
+        const btn = document.getElementById("btnAjustarStock");
+
+        if (isNaN(nuevaCantidad) || nuevaCantidad < 0 || !motivo) {
+            previewDiv.classList.remove("active");
+            btn.disabled = true;
+            return;
+        }
+
+        const disponibleActual = ajusteArticuloSeleccionado.cantidad_disponible;
+        const registradaActual = ajusteArticuloSeleccionado.cantidad_registrada;
+        const diferencia = nuevaCantidad - disponibleActual;
+        const nuevaRegistrada = registradaActual + diferencia;
+
+        previewDiv.innerHTML = `
+            <div style="font-weight:700; margin-bottom:6px;"><i class="fas fa-info-circle"></i> Vista previa del ajuste</div>
+            <div class="linea">
+                <span>Disponible:</span>
+                <strong>${disponibleActual} → ${nuevaCantidad} (${diferencia >= 0 ? '+' : ''}${diferencia})</strong>
+            </div>
+            <div class="linea">
+                <span>Registrada:</span>
+                <strong>${registradaActual} → ${nuevaRegistrada}</strong>
+            </div>
+            <div class="linea">
+                <span>Vendida:</span>
+                <strong>${ajusteArticuloSeleccionado.cantidad_vendida}</strong>
+            </div>
+        `;
+        previewDiv.classList.add("active");
+        btn.disabled = false;
+    }
+
+    async function aplicarAjusteStock() {
+        if (!ajusteArticuloSeleccionado) return;
+
+        const nuevaCantidad = parseInt(document.getElementById("ajusteNuevaCantidad").value);
+        const motivo = document.getElementById("ajusteMotivo").value;
+        const observaciones = document.getElementById("ajusteObservaciones").value.trim();
+
+        if (isNaN(nuevaCantidad) || nuevaCantidad < 0) {
+            alert("❌ Ingrese una cantidad válida");
+            return;
+        }
+        if (!motivo) {
+            alert("❌ Seleccione un motivo");
+            return;
+        }
+
+        const disponibleActual = ajusteArticuloSeleccionado.cantidad_disponible;
+        const registradaActual = ajusteArticuloSeleccionado.cantidad_registrada;
+        const diferencia = nuevaCantidad - disponibleActual;
+        const nuevaRegistrada = registradaActual + diferencia;
+
+        if (diferencia === 0) {
+            alert("⚠️ La cantidad no cambió. No hay nada que ajustar.");
+            return;
+        }
+
+        const ahora = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+        const idArticulo = ajusteArticuloSeleccionado.id;
+
+        showLoader("Aplicando ajuste...");
+        try {
+            await db.collection("articulos").doc(idArticulo).update({
+                cantidad_disponible: nuevaCantidad,
+                cantidad_registrada: nuevaRegistrada,
+                ultima_actualizacion: ahora
+            });
+
+            const movId = 'MOV_AJUSTE_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            await db.collection("movimientos_inventario").doc(movId).set({
+                id_movimiento: movId,
+                id_articulo: idArticulo,
+                sku: ajusteArticuloSeleccionado.sku,
+                descripcion: ajusteArticuloSeleccionado.descripcion,
+                almacen: ajusteArticuloSeleccionado.almacen,
+                tipo: 'ajuste',
+                cantidad: diferencia,
+                cantidad_disponible_antes: disponibleActual,
+                cantidad_disponible_despues: nuevaCantidad,
+                cantidad_registrada_antes: registradaActual,
+                cantidad_registrada_despues: nuevaRegistrada,
+                motivo: motivo,
+                observaciones: observaciones,
+                origen: 'ajuste_manual',
+                fecha: ahora,
+                usuario: usuarioActual.nombre
+            });
+
+            ajusteArticuloSeleccionado.cantidad_disponible = nuevaCantidad;
+            ajusteArticuloSeleccionado.cantidad_registrada = nuevaRegistrada;
+
+            hideLoader();
+            document.getElementById("ajusteRegistrada").textContent = nuevaRegistrada;
+            document.getElementById("ajusteDisponible").textContent = nuevaCantidad;
+
+            alert(`✅ AJUSTE APLICADO\n\nProducto: ${idArticulo}\nDisponible: ${disponibleActual} → ${nuevaCantidad}\nDiferencia: ${diferencia >= 0 ? '+' : ''}${diferencia}\nMotivo: ${motivo}`);
+            cerrarModalAjuste();
+        } catch(e) {
+            hideLoader();
+            alert("❌ ERROR al ajustar: " + e.message);
+        }
+    }
+
+    // ==================== ACTUALIZAR PRECIO ====================
+    window.abrirModalActualizarPrecio = function() {
+        document.getElementById("precioBuscarInput").value = "";
+        document.getElementById("precioResultados").innerHTML = "";
+        document.getElementById("precioResultados").classList.remove("active");
+        document.getElementById("precioSeleccionado").classList.remove("active");
+        document.getElementById("precioNuevoValor").value = "";
+        document.getElementById("precioMensaje").className = "precio-mensaje";
+        precioArticuloSeleccionado = null;
+
+        document.getElementById("modalActualizarPrecio").classList.add("active");
+        setTimeout(() => document.getElementById("precioBuscarInput").focus(), 100);
+    };
+
+    window.cerrarModalActualizarPrecio = function() {
+        document.getElementById("modalActualizarPrecio").classList.remove("active");
+    };
+
+    function buscarArticuloPrecio() {
+        const termino = toUpper(document.getElementById("precioBuscarInput").value);
+        const div = document.getElementById("precioResultados");
+
+        if (!termino) {
+            div.classList.remove("active");
+            div.innerHTML = "";
+            return;
+        }
+
+        const resultados = articulosCache.filter(art => {
+            const precioData = preciosCache[art.id];
+            return art.id.includes(termino)
+                || art.sku.includes(termino)
+                || art.descripcion.includes(termino)
+                || (precioData?.descripcion_sistema || "").includes(termino);
+        });
+
+        if (resultados.length === 0) {
+            div.innerHTML = '<div style="padding:15px; text-align:center; color:#6C8196; font-size:0.8rem;">NO SE ENCONTRARON PRODUCTOS</div>';
+            div.classList.add("active");
+            return;
+        }
+
+        div.innerHTML = resultados.map(art => {
+            const precioData = preciosCache[art.id];
+            const descSistema = precioData?.descripcion_sistema || "";
+            const foto = art.fotografia
+                ? `<img src="${art.fotografia}" class="foto" onerror="this.style.display='none'">`
+                : '<div class="foto" style="display:flex;align-items:center;justify-content:center;"><i class="fas fa-image" style="color:#9CA3AF;"></i></div>';
+            return `<div class="precio-resultado-item" data-id="${art.id}">
+                ${foto}
+                <div class="info">
+                    <div><span class="id-sku">${art.id}</span><span class="sku">${art.sku}</span></div>
+                    <div class="desc">${descSistema || art.descripcion || ''}</div>
+                </div>
+            </div>`;
+        }).join('');
+        div.classList.add("active");
+
+        div.querySelectorAll(".precio-resultado-item").forEach(el => {
+            el.addEventListener("click", () => seleccionarArticuloPrecio(el.dataset.id));
+        });
+    }
+
+    function seleccionarArticuloPrecio(id) {
+        const art = articulosCache.find(a => a.id === id);
+        if (!art) return;
+
+        precioArticuloSeleccionado = art;
+        const precioData = preciosCache[id];
+
+        document.getElementById("precioResultados").classList.remove("active");
+        document.getElementById("precioResultados").innerHTML = "";
+        document.getElementById("precioBuscarInput").value = "";
+
+        document.getElementById("precioIdMostrar").textContent = `${art.id} · ${art.sku}`;
+        document.getElementById("precioDescMostrar").textContent = precioData?.descripcion_sistema || art.descripcion || "SIN DESCRIPCIÓN";
+
+        const p = precioData?.precio;
+        document.getElementById("precioActualMostrar").textContent = p ? `$${p.toFixed(2)}` : "SIN PRECIO";
+        document.getElementById("precioNuevoValor").value = p || "";
+        document.getElementById("precioMensaje").className = "precio-mensaje";
+
+        document.getElementById("precioSeleccionado").classList.add("active");
+        setTimeout(() => document.getElementById("precioNuevoValor").focus(), 100);
+    }
+
+    async function actualizarPrecioSeleccionado() {
+        if (!precioArticuloSeleccionado) return;
+
+        const nuevoPrecio = parseFloat(document.getElementById("precioNuevoValor").value);
+        const mensajeDiv = document.getElementById("precioMensaje");
+
+        if (isNaN(nuevoPrecio) || nuevoPrecio <= 0) {
+            mensajeDiv.className = "precio-mensaje error";
+            mensajeDiv.textContent = "❌ PRECIO INVÁLIDO";
+            return;
+        }
+
+        const idBuscar = precioArticuloSeleccionado.id;
+
+        showLoader("Actualizando precio...");
+        try {
+            const ref = db.collection("precios").doc(idBuscar);
+            const snap = await ref.get();
+            const dataToSave = {
+                p_unitario: nuevoPrecio,
+                descripcion_sistema: preciosCache[idBuscar]?.descripcion_sistema || ""
+            };
+            if (snap.exists) await ref.update(dataToSave);
+            else await ref.set(dataToSave);
+
+            preciosCache[idBuscar] = {
+                precio: nuevoPrecio,
+                descripcion_sistema: preciosCache[idBuscar]?.descripcion_sistema || ""
+            };
+
+            hideLoader();
+            document.getElementById("precioActualMostrar").textContent = `$${nuevoPrecio.toFixed(2)}`;
+            mensajeDiv.className = "precio-mensaje ok";
+            mensajeDiv.innerHTML = `✅ ACTUALIZADO: ${idBuscar} → $${nuevoPrecio.toFixed(2)}`;
+        } catch(e) {
+            hideLoader();
+            mensajeDiv.className = "precio-mensaje error";
+            mensajeDiv.textContent = `❌ ERROR: ${e.message}`;
+        }
+    }
+
+    // ==================== ADMINISTRAR USUARIOS ====================
+    window.abrirModalUsuarios = async function() {
+        document.getElementById("modalUsuarios").classList.add("active");
+        await cargarUsuariosAdmin();
+        document.getElementById("nuevoUsuario").value = "";
+        document.getElementById("nuevaPassword").value = "";
+        document.getElementById("nuevoRol").value = "ADMIN";
+    };
+
+    window.cerrarModalUsuarios = function() {
+        document.getElementById("modalUsuarios").classList.remove("active");
+    };
+
+    async function cargarUsuariosAdmin() {
+        const tbody = document.getElementById("usuariosModalBody");
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">CARGANDO...</td></tr>';
+        try {
+            const snapshot = await db.collection("usuarios").get();
+            const usuarios = [];
+            snapshot.forEach(doc => usuarios.push({
+                id: doc.id,
+                nombre: doc.data().nombre || doc.id,
+                rol: doc.data().rol || "CAPTURISTA"
+            }));
+            tbody.innerHTML = usuarios.map(u => `<tr>
+                <td>${u.nombre}</td>
+                <td>${u.rol}</td>
+                <td>
+                    <button class="acciones-btn btn-editar-usuario" onclick="editarUsuarioAdmin('${u.id}')"><i class="fas fa-edit"></i></button>
+                    <button class="acciones-btn btn-eliminar-usuario" onclick="eliminarUsuarioAdmin('${u.id}')"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`).join('');
+        } catch(e) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">ERROR</td></tr>';
+        }
+    }
+
+    window.editarUsuarioAdmin = async function(id) {
+        const nuevoRol = prompt("NUEVO ROL (ADMIN, GERENTE, CAPTURISTA, VALIDADOR):");
+        if (nuevoRol && ["ADMIN","GERENTE","CAPTURISTA","VALIDADOR"].includes(nuevoRol)) {
+            showLoader("Actualizando rol...");
+            try {
+                await db.collection("usuarios").doc(id).update({ rol: nuevoRol });
+                hideLoader();
+                alert(`✅ ROL ACTUALIZADO: ${id} → ${nuevoRol}`);
+            } catch(e) {
+                hideLoader();
+                alert("❌ ERROR: " + e.message);
+            }
+            cargarUsuariosAdmin();
+        }
+    };
+
+    window.eliminarUsuarioAdmin = async function(id) {
+        if (id === usuarioActual?.nombre) {
+            alert("NO PUEDES ELIMINARTE A TI MISMO");
+            return;
+        }
+        if (confirm(`¿ELIMINAR USUARIO ${id}?\nEsta acción no se puede deshacer.`)) {
+            showLoader("Eliminando usuario...");
+            try {
+                await db.collection("usuarios").doc(id).delete();
+                hideLoader();
+                alert(`✅ USUARIO ${id} ELIMINADO`);
+            } catch(e) {
+                hideLoader();
+                alert("❌ ERROR: " + e.message);
+            }
+            cargarUsuariosAdmin();
+        }
+    };
+
+    async function crearNuevoUsuario() {
+        const nombre = toUpper(document.getElementById("nuevoUsuario").value);
+        const rol = document.getElementById("nuevoRol").value;
+        const pass = document.getElementById("nuevaPassword").value;
+
+        if (!nombre || !pass) {
+            alert("COMPLETE TODOS LOS CAMPOS");
+            return;
+        }
+        if (pass.length < 4) {
+            alert("LA CONTRASEÑA DEBE TENER AL MENOS 4 CARACTERES");
+            return;
+        }
+
+        showLoader("Creando usuario...");
+        try {
+            const docRef = db.collection("usuarios").doc(nombre);
+            const docSnap = await docRef.get();
+            if (docSnap.exists) {
+                hideLoader();
+                alert("⚠️ EL USUARIO YA EXISTE");
+                return;
+            }
+
+            await docRef.set({
+                nombre: nombre,
+                rol: rol,
+                password: pass,
+                fechaCreacion: new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }),
+                creadoPor: usuarioActual.nombre
+            });
+
+            hideLoader();
+            alert(`✅ USUARIO ${nombre} CREADO\nRol: ${rol}`);
+            document.getElementById("nuevoUsuario").value = "";
+            document.getElementById("nuevaPassword").value = "";
+            await cargarUsuariosAdmin();
+        } catch(e) {
+            hideLoader();
+            alert("❌ ERROR: " + e.message);
+        }
+    }
+
+    // ==================== RANGO DE FOLIOS ====================
+    window.abrirModalFolios = async function() {
+        document.getElementById("folioError").textContent = "";
+        document.getElementById("nuevoFolioInicio").value = "";
+        document.getElementById("nuevoFolioFin").value = "";
+        document.getElementById("modalFolios").classList.add("active");
+
+        showLoader("Cargando rango de folios...");
+        try {
+            const snap = await db.collection("folio_papeleta").doc("rango_actual").get();
+            if (!snap.exists) {
+                hideLoader();
+                alert("⚠️ No existe configuración de folios. Se creará con el rango default al vuelo.");
+                return;
+            }
+            const d = snap.data();
+            const disponibles = Math.max(0, d.folio_fin - d.folio_actual + 1);
+
+            document.getElementById("folioInicioActual").textContent = d.folio_inicio;
+            document.getElementById("folioFinActual").textContent = d.folio_fin;
+            document.getElementById("folioSiguienteActual").textContent = d.folio_actual;
+            document.getElementById("foliosDisponiblesActual").textContent = disponibles;
+
+            document.getElementById("nuevoFolioInicio").value = d.folio_inicio;
+            document.getElementById("nuevoFolioFin").value = d.folio_fin;
+        } catch(e) {
+            hideLoader();
+            alert("❌ ERROR: " + e.message);
+        }
+        hideLoader();
+    };
+
+    window.cerrarModalFolios = function() {
+        document.getElementById("modalFolios").classList.remove("active");
+    };
+
+    async function actualizarRangoFolios() {
+        const inicio = parseInt(document.getElementById("nuevoFolioInicio").value);
+        const fin = parseInt(document.getElementById("nuevoFolioFin").value);
+        const errDiv = document.getElementById("folioError");
+
+        errDiv.textContent = "";
+
+        if (isNaN(inicio) || isNaN(fin)) {
+            errDiv.textContent = "❌ Ingrese valores numéricos válidos";
+            return;
+        }
+        if (inicio < 1 || fin < 1) {
+            errDiv.textContent = "❌ Los valores deben ser mayores a 0";
+            return;
+        }
+        if (inicio >= fin) {
+            errDiv.textContent = "❌ El folio inicio debe ser MENOR que el folio fin";
+            return;
+        }
+
+        showLoader("Actualizando rango...");
+        try {
+            const ref = db.collection("folio_papeleta").doc("rango_actual");
+            const snap = await ref.get();
+            let folioActual;
+
+            if (snap.exists) {
+                const d = snap.data();
+                const actualAnterior = d.folio_actual;
+                // Si el folio actual está dentro del nuevo rango, se mantiene
+                // Si no, se resetea al inicio
+                if (actualAnterior >= inicio && actualAnterior <= fin) {
+                    folioActual = actualAnterior;
+                } else {
+                    folioActual = inicio;
+                }
+            } else {
+                folioActual = inicio;
+            }
+
+            await ref.set({
+                folio_inicio: inicio,
+                folio_fin: fin,
+                folio_actual: folioActual,
+                fecha_actualizacion: new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }),
+                actualizado_por: usuarioActual.nombre
+            }, { merge: true });
+
+            hideLoader();
+            alert(`✅ RANGO ACTUALIZADO\nInicio: ${inicio}\nFin: ${fin}\nSiguiente folio: ${folioActual}\nDisponibles: ${fin - folioActual + 1}`);
+            cerrarModalFolios();
+        } catch(e) {
+            hideLoader();
+            alert("❌ ERROR: " + e.message);
+        }
+    }
+
+    // ==================== FORMATEAR DATOS ====================
+    window.abrirModalFormatear = function() {
+        // Reset checkboxes
+        document.querySelectorAll('#coleccionesLista input[type="checkbox"]').forEach(chk => chk.checked = false);
+        document.getElementById("formatearConfirmInput").value = "";
+        document.getElementById("btnEjecutarFormateo").disabled = true;
+        document.getElementById("modalFormatear").classList.add("active");
+    };
+
+    window.cerrarModalFormatear = function() {
+        document.getElementById("modalFormatear").classList.remove("active");
+    };
+
+    function validarFormateoInput() {
+        const valor = document.getElementById("formatearConfirmInput").value.trim();
+        const btn = document.getElementById("btnEjecutarFormateo");
+        if (valor === "BORRAR") {
+            btn.disabled = false;
+        } else {
+            btn.disabled = true;
+        }
+    }
+
+    async function ejecutarFormateo() {
+        const coleccionesSeleccionadas = [];
+        document.querySelectorAll('#coleccionesLista input[type="checkbox"]:checked').forEach(chk => {
+            coleccionesSeleccionadas.push(chk.dataset.coleccion);
+        });
+
+        if (coleccionesSeleccionadas.length === 0) {
+            alert("⚠️ Selecciona al menos una colección para formatear");
+            return;
+        }
+
+        const confirmacion = confirm(
+            `⚠️ CONFIRMACIÓN FINAL ⚠️\n\n` +
+            `Vas a borrar PERMANENTEMENTE:\n\n` +
+            coleccionesSeleccionadas.map(c => `• ${c}`).join('\n') +
+            `\n\n¿Estás COMPLETAMENTE seguro?`
+        );
+        if (!confirmacion) return;
+
+        cerrarModalFormatear();
+        showLoader("Iniciando formateo...");
+
+        const resultados = {
+            ventas: 0,
+            movimientos_inventario: 0,
+            cortes: 0,
+            articulos: 0,
+            precios: 0,
+            turnosEvento: 0,
+            reset_cantidades: 0
+        };
+
+        try {
+            // Borrar colecciones de Firestore
+            for (const col of coleccionesSeleccionadas) {
+                if (col === "turnosEvento") {
+                    // Borrar RTDB
+                    actualizarProgreso("Borrando turnos (Realtime Database)...", "");
+                    await rtdb.ref("turnosEvento").remove();
+                    resultados.turnosEvento = 1;
+                } else if (col === "reset_cantidades") {
+                    // Resetear cantidades de artículos
+                    actualizarProgreso("Reseteando cantidades de artículos...", "Consultando...");
+                    const snapshot = await db.collection("articulos").get();
+                    const docs = [];
+                    snapshot.forEach(doc => docs.push(doc));
+                    let procesados = 0;
+
+                    // Batch de 500
+                    for (let i = 0; i < docs.length; i += 500) {
+                        const batch = db.batch();
+                        const lote = docs.slice(i, i + 500);
+                        lote.forEach(doc => {
+                            const data = doc.data();
+                            batch.update(doc.ref, {
+                                cantidad_disponible: data.cantidad_registrada ?? data.cantidad ?? 0,
+                                cantidad_vendida: 0,
+                                ultima_actualizacion: new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })
+                            });
+                        });
+                        await batch.commit();
+                        procesados += lote.length;
+                        actualizarProgreso("Reseteando cantidades...", `${procesados} / ${docs.length}`);
+                    }
+                    resultados.reset_cantidades = docs.length;
+                } else {
+                    // Borrar colección completa de Firestore
+                    actualizarProgreso(`Borrando ${col}...`, "Consultando...");
+                    const snapshot = await db.collection(col).get();
+                    const docs = [];
+                    snapshot.forEach(doc => docs.push(doc));
+                    const total = docs.length;
+                    let procesados = 0;
+
+                    for (let i = 0; i < total; i += 500) {
+                        const batch = db.batch();
+                        const lote = docs.slice(i, i + 500);
+                        lote.forEach(doc => batch.delete(doc.ref));
+                        await batch.commit();
+                        procesados += lote.length;
+                        actualizarProgreso(`Borrando ${col}...`, `${procesados} / ${total}`);
+                    }
+                    resultados[col] = total;
+                }
+            }
+
+            // Guardar log
+            const logId = "FORMATEO_" + Date.now();
+            await db.collection("logs_formateo").doc(logId).set({
+                id_log: logId,
+                fecha: new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }),
+                usuario: usuarioActual.nombre,
+                rol: usuarioActual.rol,
+                colecciones_borradas: coleccionesSeleccionadas,
+                documentos_borrados: resultados,
+                turnos_borrados: coleccionesSeleccionadas.includes("turnosEvento"),
+                reset_articulos: coleccionesSeleccionadas.includes("reset_cantidades")
+            });
+
+            // Recargar caches
+            await cargarArticulos();
+            await cargarPrecios();
+
+            hideLoader();
+
+            // Mostrar resumen
+            let resumen = "✅ FORMATEO COMPLETADO\n\n";
+            coleccionesSeleccionadas.forEach(c => {
+                if (c === "turnosEvento") {
+                    resumen += `• TURNOS: Nodo eliminado\n`;
+                } else if (c === "reset_cantidades") {
+                    resumen += `• RESET CANTIDADES: ${resultados.reset_cantidades} artículos reseteados\n`;
+                } else {
+                    resumen += `• ${c.toUpperCase()}: ${resultados[c]} documentos borrados\n`;
+                }
+            });
+            alert(resumen);
+
+        } catch(e) {
+            hideLoader();
+            console.error("Error en formateo:", e);
+            alert("❌ ERROR DURANTE EL FORMATEO:\n" + e.message);
+        }
+    }
+
+    // ==================== EVENTOS ====================
+    document.addEventListener("DOMContentLoaded", async function() {
+        // Crear admin por defecto si no existe
+        try {
+            const docRef = db.collection("usuarios").doc("ELUGO");
+            const doc = await docRef.get();
+            if (!doc.exists) {
+                await db.collection("usuarios").doc("ELUGO").set({
+                    nombre: "ELUGO",
+                    rol: "ADMIN",
+                    password: "Hapack90.",
+                    fechaCreacion: new Date().toLocaleString('es-MX')
+                });
+            }
+        } catch(e) {
+            console.error("No se pudo verificar admin:", e);
+        }
+
+        // Login
+        document.getElementById("loginBtn").addEventListener("click", iniciarSesion);
+        document.getElementById("loginUsuario").addEventListener("keypress", e => { if (e.key === "Enter") iniciarSesion(); });
+        document.getElementById("loginPassword").addEventListener("keypress", e => { if (e.key === "Enter") iniciarSesion(); });
+
+        // Header
+        document.getElementById("btnCerrarSesion").addEventListener("click", cerrarSesion);
+        document.getElementById("btnCorte").addEventListener("click", abrirModalCorte);
+        document.getElementById("btnInventario").addEventListener("click", abrirModalInventario);
+        document.getElementById("btnDescargar").addEventListener("click", exportarCodigos);
+
+        // Botones nuevos
+        document.getElementById("btnAjusteStock").addEventListener("click", abrirModalAjuste);
+        document.getElementById("btnUsuarios").addEventListener("click", abrirModalUsuarios);
+        document.getElementById("btnFolios").addEventListener("click", abrirModalFolios);
+        document.getElementById("btnFormatear").addEventListener("click", abrirModalFormatear);
+
+        // Búsqueda en ajuste
+        document.getElementById("ajusteBuscarBtn").addEventListener("click", buscarArticuloAjuste);
+        document.getElementById("ajusteBuscarInput").addEventListener("input", buscarArticuloAjuste);
+        document.getElementById("ajusteBuscarInput").addEventListener("keypress", e => {
+            if (e.key === "Enter") { e.preventDefault(); buscarArticuloAjuste(); }
+        });
+        document.getElementById("ajusteNuevaCantidad").addEventListener("input", actualizarPreviewAjuste);
+        document.getElementById("ajusteMotivo").addEventListener("change", actualizarPreviewAjuste);
+        document.getElementById("btnAjustarStock").addEventListener("click", aplicarAjusteStock);
+
+        // Búsqueda en precio
+        document.getElementById("precioBuscarBtn").addEventListener("click", buscarArticuloPrecio);
+        document.getElementById("precioBuscarInput").addEventListener("input", buscarArticuloPrecio);
+        document.getElementById("precioBuscarInput").addEventListener("keypress", e => {
+            if (e.key === "Enter") { e.preventDefault(); buscarArticuloPrecio(); }
+        });
+        document.getElementById("precioActualizarBtn").addEventListener("click", actualizarPrecioSeleccionado);
+        document.getElementById("precioNuevoValor").addEventListener("keypress", e => {
+            if (e.key === "Enter") { e.preventDefault(); actualizarPrecioSeleccionado(); }
+        });
+
+        // Usuarios
+        document.getElementById("btnCrearUsuario").addEventListener("click", crearNuevoUsuario);
+
+        // Folios
+        document.getElementById("btnActualizarFolios").addEventListener("click", actualizarRangoFolios);
+
+        // Formatear
+        document.getElementById("btnMarcarTodo").addEventListener("click", () => {
+            document.querySelectorAll('#coleccionesLista input[type="checkbox"]').forEach(chk => chk.checked = true);
+        });
+        document.getElementById("btnDesmarcarTodo").addEventListener("click", () => {
+            document.querySelectorAll('#coleccionesLista input[type="checkbox"]').forEach(chk => chk.checked = false);
+        });
+        document.getElementById("formatearConfirmInput").addEventListener("input", validarFormateoInput);
+        document.getElementById("btnEjecutarFormateo").addEventListener("click", ejecutarFormateo);
+
+        // Buscar venta
+        document.getElementById("folioVenta").addEventListener("keypress", e => {
+            if (e.key === "Enter") buscarVenta();
+        });
+
+        // Escape
+        document.addEventListener("keydown", e => {
+            if (e.key === "Escape") {
+                if (document.getElementById("modalAjusteStock").classList.contains("active")) cerrarModalAjuste();
+                if (document.getElementById("modalActualizarPrecio").classList.contains("active")) cerrarModalActualizarPrecio();
+                if (document.getElementById("modalInventario").classList.contains("active")) cerrarModalInventario();
+                if (document.getElementById("modalOfertaVenta").classList.contains("active")) cerrarModalOfertaVenta();
+                if (document.getElementById("modalCorte").classList.contains("active")) cerrarModalCorte();
+                if (document.getElementById("modalUsuarios").classList.contains("active")) cerrarModalUsuarios();
+                if (document.getElementById("modalFolios").classList.contains("active")) cerrarModalFolios();
+                if (document.getElementById("modalFormatear").classList.contains("active")) cerrarModalFormatear();
+            }
+        });
+    });
+</script>
+</body>
+</html>
