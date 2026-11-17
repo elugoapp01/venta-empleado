@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Catálogo de Artículos · Sistema Corporativo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #EFF2F7;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .catalog-container {
+            max-width: 1600px;
+            width: 100%;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 35px -8px rgba(11, 47, 92, 0.08);
+            padding: 30px;
+            border: 1px solid rgba(201, 167, 77, 0.15);
+        }
+
+        /* ========== HEADER ========== */
+        .header-catalog {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #E9ECF0;
+            padding-bottom: 18px;
+        }
+        .header-catalog .left { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .header-catalog h1 {
+            font-size: 1.8rem; font-weight: 700; color: #0B2F5C;
+            display: flex; align-items: center; gap: 12px; margin: 0;
+        }
+        /* ✅ LOGO: ahora imagen mesa_control.png en lugar del ícono libro */
+        .header-catalog h1 .logo-catalogo {
+            width: 42px;
+            height: 42px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #F2F6FA;
+            padding: 4px;
+            flex-shrink: 0;
+        }
+
+        /* ========== 🔍 BUSCADOR CENTRADO EN HEADER ========== */
+        .header-search {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            min-width: 220px;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+        .search-bar {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #F2F6FA;
+            border: 1.5px solid #E2E7ED;
+            border-radius: 40px;
+            padding: 5px 6px 5px 14px;
+            width: 100%;
+            transition: 0.2s;
+        }
+        .search-bar:focus-within {
+            border-color: #C9A74D;
+            background: white;
+            box-shadow: 0 4px 16px rgba(201, 167, 77, 0.15);
+        }
+        .search-bar > i { color: #6C8196; font-size: 0.9rem; flex-shrink: 0; }
+        .search-bar input {
+            flex: 1; border: none; outline: none; background: transparent;
+            font-family: inherit; font-size: 0.85rem; color: #0B2F5C;
+            padding: 6px 0; min-width: 0;
+        }
+        .search-bar input::placeholder { color: #9CA3AF; font-weight: 400; }
+        .search-bar .search-clear {
+            background: #E2E7ED; border: none; width: 26px; height: 26px;
+            border-radius: 50%; color: #4A627A; cursor: pointer;
+            display: none; align-items: center; justify-content: center;
+            font-size: 0.68rem; transition: 0.15s; flex-shrink: 0;
+        }
+        .search-bar .search-clear.visible { display: flex; }
+        .search-bar .search-clear:hover { background: #C9A74D; color: white; }
+        .search-bar .search-results-count {
+            background: #0B2F5C; color: white; padding: 3px 10px;
+            border-radius: 20px; font-size: 0.65rem; font-weight: 700;
+            display: none; white-space: nowrap; flex-shrink: 0;
+        }
+        .search-bar .search-results-count.visible { display: inline-block; }
+
+        .stats { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .stat-item {
+            background: #F2F6FA; padding: 8px 16px; border-radius: 30px;
+            font-size: 0.78rem; font-weight: 600; color: #0B2F5C;
+            display: flex; align-items: center; gap: 8px;
+            white-space: nowrap;
+        }
+        .stat-item i { color: #C9A74D; }
+
+        /* ============================================================
+           GRID AUTO-AJUSTABLE
+           ============================================================ */
+        .articulos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 18px;
+        }
+
+        .articulo-card {
+            background: #F9FBFD; border-radius: 16px; overflow: hidden;
+            transition: all 0.3s ease; border: 1px solid #E2E7ED; cursor: pointer;
+        }
+        .articulo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(11, 47, 92, 0.1);
+            border-color: #C9A74D;
+        }
+        .articulo-card .foto-container {
+            width: 100%; height: 170px;
+            background: #F2F6FA;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; position: relative;
+            padding: 8px;
+        }
+        .articulo-card .foto-container img {
+            width: 100%; height: 100%;
+            object-fit: contain;
+            object-position: center;
+            transition: transform 0.3s ease;
+        }
+        .articulo-card:hover .foto-container img { transform: scale(1.03); }
+        .articulo-card .foto-container .no-image {
+            font-size: 2.5rem; color: #6C8196; opacity: 0.5;
+        }
+
+        .articulo-card .info { padding: 12px 14px; }
+        .articulo-card .info .id-badge {
+            display: inline-block; background: #C9A74D; color: white;
+            padding: 2px 10px; border-radius: 20px;
+            font-size: 0.65rem; font-weight: 700; margin-bottom: 6px;
+        }
+        .articulo-card .info .sku { font-size: 0.7rem; color: #6C8196; font-weight: 500; }
+        .articulo-card .info .descripcion {
+            font-weight: 600; color: #0B2F5C; font-size: 0.8rem;
+            margin: 4px 0; display: -webkit-box;
+            -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden; min-height: 38px;
+        }
+        .articulo-card .info .desc-sistema {
+            font-size: 0.65rem; color: #6C8196; margin-bottom: 6px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .articulo-card .info .zona-badge {
+            display: inline-block; padding: 3px 10px; border-radius: 20px;
+            font-size: 0.6rem; font-weight: 700; margin-bottom: 6px;
+        }
+        .zona-a { background: #DBEAFE; color: #1E40AF; }
+        .zona-b { background: #FEF3C7; color: #92400E; }
+
+        .articulo-card .info .precio-container {
+            background: white; border-radius: 10px; padding: 8px 10px;
+            margin: 6px 0; border: 1.5px solid #E2E7ED;
+        }
+        .articulo-card .info .precio-inventario {
+            font-size: 0.9rem; font-weight: 700; color: #0B2F5C;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .articulo-card .info .precio-inventario span {
+            color: #6C8196; font-weight: 500; font-size: 0.6rem;
+        }
+        .articulo-card .info .precios-venta {
+            display: flex; gap: 8px; margin-top: 6px; font-size: 0.73rem;
+        }
+        .articulo-card .info .precios-venta .precio-30,
+        .articulo-card .info .precios-venta .precio-40 {
+            background: #F2F6FA; padding: 4px 8px; border-radius: 16px;
+            font-weight: 600; color: #0B2F5C; flex: 1; text-align: center;
+            border: 1px solid #E2E7ED;
+        }
+        .articulo-card .info .precios-venta .label-precio {
+            font-weight: 400; font-size: 0.5rem; color: #6C8196; display: block;
+        }
+
+        .articulo-card .info .cantidad-container {
+            display: flex; align-items: center; gap: 8px;
+            background: #ECFDF5; padding: 6px 12px; border-radius: 10px;
+            margin-top: 6px; border: 1px solid #A7F3D0;
+        }
+        .articulo-card .info .cantidad-container.agotado {
+            background: #FEE2E2; border-color: #FCA5A5;
+        }
+        .articulo-card .info .cantidad-container .cantidad-icon {
+            color: #1F6C4A; font-size: 0.85rem;
+        }
+        .articulo-card .info .cantidad-container.agotado .cantidad-icon {
+            color: #C44536;
+        }
+        .articulo-card .info .cantidad-container .cantidad-valor {
+            font-size: 1.05rem; font-weight: 800; color: #1F6C4A;
+        }
+        .articulo-card .info .cantidad-container.agotado .cantidad-valor {
+            color: #C44536;
+        }
+        .articulo-card .info .cantidad-container .cantidad-unidad {
+            font-size: 0.6rem; color: #6C8196; font-weight: 500;
+        }
+        .articulo-card .info .cantidad-label-mini {
+            font-size: 0.58rem; color: #6C8196; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.4px;
+        }
+
+        .articulo-card .info .detalles {
+            display: flex; gap: 8px; flex-wrap: wrap;
+            margin-top: 6px; font-size: 0.6rem; color: #4A627A;
+        }
+        .articulo-card .info .detalles span {
+            background: white; padding: 2px 8px; border-radius: 16px;
+            border: 1px solid #E2E7ED;
+        }
+
+        mark.highlight-match {
+            background: #FFF3B0; color: #7a5a00;
+            font-weight: 700; padding: 0 1px; border-radius: 2px;
+        }
+
+        /* ============================================================
+           ✅ LOADER ESTILO DASHBOARD (logo pulso + barras animadas)
+           ============================================================ */
+        .loader-overlay {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 99999;
+            opacity: 0; visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .loader-overlay.active { opacity: 1; visibility: visible; }
+        .loader-content { text-align: center; }
+        .loader-logo {
+            margin-bottom: 40px;
+            animation: pulseGlow 2s ease-in-out infinite;
+        }
+        .loader-logo img {
+            max-width: 100px;
+            max-height: 100px;
+            object-fit: contain;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(255,255,255,0.3)); }
+            50% { filter: drop-shadow(0 0 30px rgba(255,255,255,0.6)); }
+        }
+        .loader-bars {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .loader-bars span {
+            width: 8px;
+            height: 35px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 5px;
+            animation: barBounce 1s ease-in-out infinite;
+        }
+        .loader-bars span:nth-child(1) { animation-delay: 0s; }
+        .loader-bars span:nth-child(2) { animation-delay: 0.1s; }
+        .loader-bars span:nth-child(3) { animation-delay: 0.2s; }
+        .loader-bars span:nth-child(4) { animation-delay: 0.3s; }
+        .loader-bars span:nth-child(5) { animation-delay: 0.4s; }
+        @keyframes barBounce {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(2); }
+        }
+
+        .modal-detalle {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none; justify-content: center; align-items: center;
+            z-index: 10000; padding: 20px;
+        }
+        .modal-detalle.active { display: flex; }
+        .modal-detalle-content {
+            background: white; border-radius: 28px; max-width: 700px;
+            width: 100%; max-height: 95vh; overflow-y: auto;
+            padding: 30px; animation: modalFadeIn 0.4s ease;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .modal-detalle-content .modal-foto {
+            width: 100%; max-height: 500px; border-radius: 16px;
+            overflow: hidden; background: #F2F6FA;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px; position: relative;
+        }
+        .modal-detalle-content .modal-foto img {
+            width: 100%; height: auto; max-height: 500px;
+            object-fit: contain; display: block;
+        }
+        .modal-detalle-content .modal-foto .no-image {
+            font-size: 4rem; color: #6C8196; opacity: 0.5; padding: 60px;
+        }
+        .modal-detalle-content .modal-info {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+        }
+        .modal-detalle-content .modal-info .campo {
+            background: #F9FBFD; padding: 10px 14px; border-radius: 12px;
+        }
+        .modal-detalle-content .modal-info .campo .label {
+            font-size: 0.65rem; text-transform: uppercase; color: #6C8196;
+            font-weight: 600; letter-spacing: 0.5px;
+        }
+        .modal-detalle-content .modal-info .campo .value {
+            font-weight: 600; color: #0B2F5C; font-size: 0.9rem; margin-top: 2px;
+        }
+        .modal-detalle-content .modal-info .campo .value.precio {
+            color: #1F6C4A; font-size: 1.2rem;
+        }
+        .modal-detalle-content .modal-info .campo .value.precio-venta { font-size: 1rem; }
+        .modal-detalle-content .modal-info .campo .value.precio-venta .precio-30-modal,
+        .modal-detalle-content .modal-info .campo .value.precio-venta .precio-40-modal {
+            color: #0B2F5C; background: #F2F6FA; padding: 4px 12px;
+            border-radius: 20px; display: inline-block; margin: 2px 0;
+            border: 1px solid #E2E7ED; font-weight: 600;
+        }
+        .modal-detalle-content .modal-close {
+            margin-top: 20px; width: 100%; padding: 14px;
+            background: #0B2F5C; color: white; border: none;
+            border-radius: 40px; font-weight: 700; cursor: pointer;
+            transition: 0.2s; font-size: 1rem;
+        }
+        .modal-detalle-content .modal-close:hover { background: #16486C; }
+
+        .no-results { text-align: center; padding: 60px 20px; color: #6C8196; }
+        .no-results i { font-size: 4rem; color: #C9A74D; opacity: 0.5; margin-bottom: 15px; }
+
+        .modal-detalle-content::-webkit-scrollbar { width: 6px; }
+        .modal-detalle-content::-webkit-scrollbar-track { background: #F2F6FA; border-radius: 10px; }
+        .modal-detalle-content::-webkit-scrollbar-thumb { background: #C9A74D; border-radius: 10px; }
+
+        /* ============================================================
+           RESPONSIVE
+           ============================================================ */
+        @media (max-width: 1100px) {
+            .articulos-grid {
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            }
+        }
+
+        @media (max-width: 900px) {
+            .header-catalog { flex-direction: column; align-items: stretch; }
+            .header-catalog .left { justify-content: space-between; }
+            .header-search { max-width: 100%; order: 2; margin: 4px 0; }
+            .stats { justify-content: center; order: 3; }
+        }
+
+        @media (max-width: 768px) {
+            .catalog-container { padding: 20px; }
+            .header-catalog h1 { font-size: 1.3rem; }
+            .header-catalog h1 .logo-catalogo { width: 32px; height: 32px; }
+            .articulos-grid {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                gap: 14px;
+            }
+            .articulo-card .foto-container { height: 150px; }
+            .modal-detalle-content .modal-info { grid-template-columns: 1fr; }
+            .modal-detalle-content .modal-foto { max-height: 300px; }
+            .modal-detalle-content .modal-foto img { max-height: 300px; }
+            .articulo-card .info .cantidad-container .cantidad-valor { font-size: 1rem; }
+            .articulo-card .info .precios-venta { flex-direction: column; }
+            .search-bar input { font-size: 0.82rem; }
+
+            .loader-logo img { max-width: 80px; max-height: 80px; }
+            .loader-bars span { width: 7px; height: 30px; }
+        }
+
+        @media (max-width: 520px) {
+            .articulos-grid {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+            .articulo-card .foto-container { height: 200px; }
+            .articulo-card .info { padding: 12px 14px; }
+            .articulo-card .info .descripcion { font-size: 0.82rem; min-height: auto; }
+            .articulo-card .info .precio-inventario { font-size: 0.95rem; }
+            .articulo-card .info .precios-venta { font-size: 0.78rem; flex-direction: row; gap: 8px; }
+            .articulo-card .info .cantidad-container .cantidad-valor { font-size: 1.1rem; }
+            .articulo-card .info .detalles { font-size: 0.65rem; }
+
+            .catalog-container { padding: 16px; border-radius: 20px; }
+            .header-catalog h1 { font-size: 1.1rem; }
+            .stat-item { font-size: 0.68rem; padding: 4px 10px; }
+            .search-bar { padding: 4px 5px 4px 12px; }
+            .search-bar input { font-size: 0.78rem; }
+            .search-bar .search-results-count { font-size: 0.6rem; padding: 3px 8px; }
+            .modal-detalle-content .modal-foto { max-height: 250px; }
+            .modal-detalle-content .modal-foto img { max-height: 250px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ✅ LOADER ESTILO DASHBOARD -->
+    <div id="loaderOverlay" class="loader-overlay active">
+        <div class="loader-content">
+            <div class="loader-logo">
+                <img src="mesa_control.png" alt="Logo" onerror="this.style.display='none'">
+            </div>
+            <div class="loader-bars">
+                <span></span><span></span><span></span><span></span><span></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="catalog-container">
+        <!-- HEADER -->
+        <div class="header-catalog">
+            <div class="left">
+                <h1>
+                    <!-- ✅ Logo mesa_control.png en lugar del ícono libro -->
+                    <img src="mesa_control.png" alt="Logo" class="logo-catalogo" onerror="this.style.display='none'">
+                    Catálogo
+                </h1>
+            </div>
+
+            <!-- 🔍 BUSCADOR CENTRADO -->
+            <div class="header-search">
+                <div class="search-bar" id="searchBar">
+                    <i class="fas fa-search"></i>
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Buscar ID, SKU, descripción, código, almacén..."
+                        autocomplete="off"
+                        spellcheck="false"
+                    >
+                    <span class="search-results-count" id="searchResultsCount"></span>
+                    <button class="search-clear" id="searchClear" title="Limpiar búsqueda">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <i class="fas fa-boxes"></i>
+                    <span id="totalArticulos">0</span> artículos
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-warehouse"></i>
+                    <span id="totalAlmacenes">0</span> almacenes
+                </div>
+                <div class="stat-item" style="background:#ECFDF5;">
+                    <i class="fas fa-cubes" style="color:#1F6C4A;"></i>
+                    <span id="totalUnidades">0</span> unidades
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENEDOR DE TARJETAS -->
+        <div id="articulosGrid" class="articulos-grid"></div>
+    </div>
+
+    <!-- MODAL DETALLE -->
+    <div id="modalDetalle" class="modal-detalle">
+        <div class="modal-detalle-content">
+            <div class="modal-foto" id="modalFoto">
+                <div class="no-image"><i class="fas fa-image"></i></div>
+            </div>
+            <div class="modal-info" id="modalInfo"></div>
+            <button class="modal-close" onclick="cerrarModal()">
+                <i class="fas fa-times"></i> Cerrar
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ========== FIREBASE ==========
+        const firebaseConfig = {
+            apiKey: "AIzaSyA0wUh8AqTOT36ofTMVHdKSRqWZ1MMhHzY",
+            authDomain: "venta-empleado.firebaseapp.com",
+            projectId: "venta-empleado",
+            storageBucket: "venta-empleado.firebasestorage.app",
+            messagingSenderId: "655370302032",
+            appId: "1:655370302032:web:bc276acc7683a67b49d755"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // ========== ESTADO ==========
+        let articulosCompletos = [];
+        let articulosFiltrados = [];
+        let preciosMap = {};
+        let terminoBusqueda = '';
+
+        function redondearArriba(precio) {
+            return Math.ceil(precio / 10) * 10;
+        }
+
+        function leerCantidades(data) {
+            const disponibles = Number(data.cantidad_disponible) || 0;
+            const registradas = Number(data.cantidad_registrada) || 0;
+            const vendidas    = Number(data.cantidad_vendida)    || 0;
+            let disponibleFinal = disponibles;
+            if (!data.cantidad_disponible && (registradas || vendidas)) {
+                disponibleFinal = registradas - vendidas;
+            }
+            return { disponible: disponibleFinal, registrada: registradas, vendida: vendidas };
+        }
+
+        // ========== LOADER ==========
+        function showLoader() {
+            document.getElementById('loaderOverlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        function hideLoader() {
+            document.getElementById('loaderOverlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // ========== CARGAR DATOS ==========
+        async function cargarCatalogo() {
+            try {
+                showLoader();
+
+                // 1) Precios
+                const preciosSnap = await db.collection('precios').get();
+                preciosMap = {};
+                preciosSnap.forEach(doc => {
+                    const data = doc.data();
+                    preciosMap[doc.id] = {
+                        precio: Number(data.p_unitario) || 0,
+                        descripcion_sistema: data.descripcion_sistema || ''
+                    };
+                });
+
+                // 2) Artículos
+                const articulosSnap = await db.collection('articulos').get();
+                articulosCompletos = [];
+                articulosSnap.forEach(doc => {
+                    const data = doc.data();
+                    const id = doc.id;
+                    const precioData = preciosMap[id] || {};
+                    const cant = leerCantidades(data);
+
+                    articulosCompletos.push({
+                        id: id,
+                        sku: data.sku || '',
+                        descripcion: data.descripcion || '',
+                        codigo_barras: data.codigo_barras || '',
+                        fotografia: data.fotografia || '',
+                        cantidad_disponible: cant.disponible,
+                        cantidad_registrada: cant.registrada,
+                        cantidad_vendida: cant.vendida,
+                        unidad_venta: data.unidad_venta || 'PIEZA',
+                        almacen: data.almacen || '',
+                        pz_x_caja: data.pz_x_caja || null,
+                        precio: precioData.precio || 0,
+                        descripcion_sistema: precioData.descripcion_sistema || '',
+                        timestamp: data.timestamp || '',
+                        ultima_actualizacion: data.ultima_actualizacion || '',
+                        fuente: data.fuente || ''
+                    });
+                });
+
+                articulosCompletos.sort((a, b) => a.id.localeCompare(b.id));
+
+                document.getElementById('totalArticulos').textContent = articulosCompletos.length;
+                const almacenes = new Set(articulosCompletos.map(a => a.almacen).filter(a => a));
+                document.getElementById('totalAlmacenes').textContent = almacenes.size;
+                const totalUnidades = articulosCompletos.reduce((s, a) => s + a.cantidad_disponible, 0);
+                document.getElementById('totalUnidades').textContent = totalUnidades;
+
+                articulosFiltrados = articulosCompletos.slice();
+
+                renderizarTodo();
+                hideLoader();
+
+                setTimeout(() => document.getElementById('searchInput').focus(), 150);
+
+            } catch (error) {
+                console.error('❌ Error al cargar:', error);
+                hideLoader();
+                document.getElementById('articulosGrid').innerHTML = `
+                    <div class="no-results" style="grid-column: 1 / -1;">
+                        <i class="fas fa-exclamation-triangle" style="color:#C44536;"></i>
+                        <h3>Error al cargar el catálogo</h3>
+                        <p style="color:#6C8196;">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // ============================================================
+        // BÚSQUEDA EN TODOS LOS CAMPOS
+        // ============================================================
+        function normalizar(str) {
+            return (str === undefined || str === null) ? '' : str.toString().toUpperCase().trim();
+        }
+
+        function aplicarFiltro(termino) {
+            terminoBusqueda = normalizar(termino);
+
+            if (!terminoBusqueda) {
+                articulosFiltrados = articulosCompletos.slice();
+            } else {
+                const tokens = terminoBusqueda.split(/\s+/).filter(Boolean);
+                articulosFiltrados = articulosCompletos.filter(art => {
+                    const texto = [
+                        art.id, art.sku, art.descripcion, art.descripcion_sistema,
+                        art.codigo_barras, art.almacen, art.unidad_venta,
+                        art.precio.toFixed(2), art.cantidad_disponible.toString()
+                    ].map(normalizar).join(' ');
+                    return tokens.every(t => texto.includes(t));
+                });
+            }
+
+            renderizarTodo();
+            actualizarContadorResultados();
+        }
+
+        function actualizarContadorResultados() {
+            const contador = document.getElementById('searchResultsCount');
+            const clearBtn = document.getElementById('searchClear');
+            if (!terminoBusqueda) {
+                contador.classList.remove('visible');
+                clearBtn.classList.remove('visible');
+                return;
+            }
+            clearBtn.classList.add('visible');
+            contador.classList.add('visible');
+            const n = articulosFiltrados.length;
+            contador.textContent = n === 0
+                ? 'Sin resultados'
+                : `${n} resultado${n === 1 ? '' : 's'}`;
+        }
+
+        function resaltar(texto) {
+            if (!terminoBusqueda || !texto) return texto || '';
+            const tokens = terminoBusqueda.split(/\s+/).filter(Boolean);
+            let resultado = String(texto)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            tokens.forEach(t => {
+                if (!t) return;
+                const safe = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                resultado = resultado.replace(new RegExp(`(${safe})`, 'gi'), '<mark class="highlight-match">$1</mark>');
+            });
+            return resultado;
+        }
+
+        // ========== RENDER ==========
+        function renderizarTodo() {
+            const grid = document.getElementById('articulosGrid');
+
+            if (articulosFiltrados.length === 0) {
+                if (terminoBusqueda) {
+                    grid.innerHTML = `
+                        <div class="no-results" style="grid-column: 1 / -1;">
+                            <i class="fas fa-search"></i>
+                            <h3>Sin resultados para "${terminoBusqueda.replace(/[<>&]/g,'')}"</h3>
+                            <p style="color:#6C8196;">Intenta con otro término de búsqueda.</p>
+                        </div>`;
+                } else {
+                    grid.innerHTML = `
+                        <div class="no-results" style="grid-column: 1 / -1;">
+                            <i class="fas fa-box-open"></i>
+                            <h3>No hay artículos registrados</h3>
+                            <p style="color:#6C8196;">Comienza registrando productos en el sistema.</p>
+                        </div>`;
+                }
+                return;
+            }
+
+            let html = '';
+            for (const art of articulosFiltrados) {
+                const fotoHtml = art.fotografia
+                    ? `<img src="${art.fotografia}" alt="${art.descripcion}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'no-image\\'><i class=\\'fas fa-image\\'></i></div>'">`
+                    : `<div class="no-image"><i class="fas fa-image"></i></div>`;
+
+                const zonaClase = art.almacen === 'INVENTARIOS' ? 'zona-a'
+                                : art.almacen === 'LOGISTICA INVERSA' ? 'zona-b' : '';
+                const zonaTexto = art.almacen === 'INVENTARIOS' ? 'Zona A (INVENTARIOS)'
+                                : art.almacen === 'LOGISTICA INVERSA' ? 'Zona B (LOGISTICA INVERSA)'
+                                : art.almacen || 'N/A';
+
+                const precioInventario = art.precio;
+                const precio30 = redondearArriba(precioInventario * 0.70);
+                const precio40 = redondearArriba(precioInventario * 0.60);
+
+                const agotado = art.cantidad_disponible <= 0;
+                const claseCantidad = agotado ? 'cantidad-container agotado' : 'cantidad-container';
+                const iconoCantidad = agotado ? 'fa-times-circle' : 'fa-cubes';
+                const textoUnidad = agotado ? 'AGOTADO' : art.unidad_venta;
+
+                html += `
+                    <div class="articulo-card" onclick="abrirDetalle('${art.id}')">
+                        <div class="foto-container">${fotoHtml}</div>
+                        <div class="info">
+                            <div>
+                                <span class="id-badge">${resaltar(art.id)}</span>
+                                <span class="sku">SKU: ${resaltar(art.sku) || 'N/A'}</span>
+                            </div>
+                            <div class="descripcion">${resaltar(art.descripcion) || 'Sin descripción'}</div>
+                            ${art.descripcion_sistema ? `<div class="desc-sistema">📌 ${resaltar(art.descripcion_sistema)}</div>` : ''}
+                            <span class="zona-badge ${zonaClase}">📍 ${resaltar(zonaTexto)}</span>
+                            <div class="precio-container">
+                                <div class="precio-inventario">
+                                    <span>💰 Precio Inventario</span>
+                                    <span>$${precioInventario.toFixed(2)}</span>
+                                </div>
+                                <div class="precios-venta">
+                                    <div class="precio-30">
+                                        <span class="label-precio">-30%</span>
+                                        $${precio30.toFixed(2)}
+                                    </div>
+                                    <div class="precio-40">
+                                        <span class="label-precio">-40%</span>
+                                        $${precio40.toFixed(2)}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="${claseCantidad}">
+                                <span class="cantidad-icon"><i class="fas ${iconoCantidad}"></i></span>
+                                <span class="cantidad-valor">${art.cantidad_disponible}</span>
+                                <span class="cantidad-unidad">${textoUnidad}</span>
+                                <span class="cantidad-label-mini" style="margin-left:auto;">DISPONIBLE</span>
+                            </div>
+                            <div class="detalles">
+                                ${art.pz_x_caja ? `<span><i class="fas fa-boxes"></i> ${art.pz_x_caja} pz/caja</span>` : ''}
+                                <span><i class="fas fa-barcode"></i> ${resaltar(art.codigo_barras) || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            grid.innerHTML = html;
+        }
+
+        // ========== MODAL DETALLE ==========
+        function abrirDetalle(id) {
+            const art = articulosCompletos.find(a => a.id === id);
+            if (!art) return;
+
+            const modal = document.getElementById('modalDetalle');
+            const fotoContainer = document.getElementById('modalFoto');
+            const infoContainer = document.getElementById('modalInfo');
+
+            if (art.fotografia) {
+                fotoContainer.innerHTML = `<img src="${art.fotografia}" alt="${art.descripcion}" onerror="this.parentElement.innerHTML='<div class=\\'no-image\\'><i class=\\'fas fa-image\\'></i></div>'">`;
+            } else {
+                fotoContainer.innerHTML = `<div class="no-image"><i class="fas fa-image"></i></div>`;
+            }
+
+            const zona = art.almacen === 'INVENTARIOS' ? 'Zona A (INVENTARIOS)' :
+                         art.almacen === 'LOGISTICA INVERSA' ? 'Zona B (LOGISTICA INVERSA)' :
+                         art.almacen || 'No asignado';
+
+            const precioInventario = art.precio;
+            const precio30 = redondearArriba(precioInventario * 0.70);
+            const precio40 = redondearArriba(precioInventario * 0.60);
+
+            infoContainer.innerHTML = `
+                <div class="campo"><div class="label">ID Único</div><div class="value">${art.id}</div></div>
+                <div class="campo"><div class="label">SKU</div><div class="value">${art.sku || 'N/A'}</div></div>
+                <div class="campo" style="grid-column: 1 / -1;"><div class="label">Descripción</div><div class="value">${art.descripcion || 'Sin descripción'}</div></div>
+                <div class="campo"><div class="label">Ref. Sistema</div><div class="value">${art.descripcion_sistema || 'N/A'}</div></div>
+                <div class="campo"><div class="label">Almacén</div><div class="value">${zona}</div></div>
+                <div class="campo"><div class="label">Precio Inventario</div><div class="value precio">$${precioInventario.toFixed(2)}</div></div>
+                <div class="campo"><div class="label">Precios de Venta</div>
+                    <div class="value precio-venta">
+                        <div class="precio-30-modal">-30%: $${precio30.toFixed(2)}</div>
+                        <div class="precio-40-modal">-40%: $${precio40.toFixed(2)}</div>
+                    </div>
+                </div>
+                <div class="campo" style="background:#ECFDF5;">
+                    <div class="label">Cantidad Disponible</div>
+                    <div class="value" style="font-size:1.3rem; font-weight:800; color:#1F6C4A;">${art.cantidad_disponible} ${art.unidad_venta}</div>
+                </div>
+                <div class="campo"><div class="label">Cantidad Registrada</div><div class="value">${art.cantidad_registrada} ${art.unidad_venta}</div></div>
+                <div class="campo"><div class="label">Cantidad Vendida</div><div class="value">${art.cantidad_vendida} ${art.unidad_venta}</div></div>
+                <div class="campo"><div class="label">Unidad de Venta</div><div class="value">${art.unidad_venta}</div></div>
+                ${art.pz_x_caja ? `<div class="campo"><div class="label">Piezas por Caja</div><div class="value">${art.pz_x_caja}</div></div>` : ''}
+                <div class="campo" style="grid-column: 1 / -1;"><div class="label">Código de Barras</div><div class="value">${art.codigo_barras || 'N/A'}</div></div>
+                ${art.timestamp ? `<div class="campo"><div class="label">Fecha Registro</div><div class="value">${art.timestamp}</div></div>` : ''}
+                ${art.ultima_actualizacion ? `<div class="campo"><div class="label">Última Actualización</div><div class="value">${art.ultima_actualizacion}</div></div>` : ''}
+            `;
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function cerrarModal() {
+            document.getElementById('modalDetalle').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // ========== EVENTOS ==========
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modalAbierto = document.getElementById('modalDetalle').classList.contains('active');
+                if (modalAbierto) {
+                    cerrarModal();
+                } else {
+                    const input = document.getElementById('searchInput');
+                    if (input.value) { input.value = ''; aplicarFiltro(''); }
+                }
+            }
+        });
+
+        document.getElementById('modalDetalle').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) cerrarModal();
+        });
+
+        const searchInput = document.getElementById('searchInput');
+        let debounceTimer = null;
+
+        searchInput.addEventListener('input', (e) => {
+            const valor = e.target.value;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => aplicarFiltro(valor), 180);
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && articulosFiltrados.length === 1) {
+                abrirDetalle(articulosFiltrados[0].id);
+                searchInput.blur();
+            }
+        });
+
+        document.getElementById('searchClear').addEventListener('click', () => {
+            searchInput.value = '';
+            aplicarFiltro('');
+            searchInput.focus();
+        });
+
+        document.addEventListener('DOMContentLoaded', cargarCatalogo);
+    </script>
+</body>
+</html>
